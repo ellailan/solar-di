@@ -38,14 +38,24 @@ header { display:flex; align-items:center; gap:12px; padding:0 20px; background:
 .logo span { color:var(--text); font-weight:500; }
 
 /* ── CARD STRIP ── */
-.card-strip { display:flex; border-bottom:1px solid var(--border); background:var(--navy2); overflow-x:auto; scrollbar-width:none; flex-shrink:0; }
-.card-strip::-webkit-scrollbar { display:none; }
+.card-strip {
+  display:flex; flex-wrap:wrap;
+  border-bottom:1px solid var(--border); background:var(--navy2);
+  flex-shrink:0;
+}
 
 .metric-card {
-  flex:1 0 155px; padding:12px 18px 11px; border-right:1px solid var(--border);
+  flex:1 1 140px; padding:11px 16px 10px;
+  border-right:1px solid var(--border); border-bottom:1px solid var(--border);
   cursor:pointer; position:relative; user-select:none; transition:background .15s;
 }
-.metric-card:last-child { border-right:none; }
+
+/* on wide screens: single row, no wrapping, no bottom borders on cards */
+@media (min-width:960px) {
+  .card-strip { flex-wrap:nowrap; }
+  .metric-card { border-bottom:none; flex:1 0 140px; }
+  .map-card-separator { display:flex !important; }
+}
 .metric-card:hover, .metric-card.active { background:var(--navy3); }
 
 .metric-card::before {
@@ -69,8 +79,100 @@ header { display:flex; align-items:center; gap:12px; padding:0 20px; background:
 .mc-delta { font-size:12px; font-weight:500; margin-top:5px; color:var(--muted); transition:color .4s; }
 .delta-up { color:var(--green); } .delta-dn { color:var(--red); }
 
+/* ── RESPONSIVE METRIC VALUE SCALING ── */
+@media (max-width:600px) {
+  .mc-value { font-size:22px !important; }
+  .mc-value.no-data { font-size:16px !important; }
+  .metric-card { flex:1 1 120px; padding:9px 12px 8px; }
+}
+
 /* map card special */
 .map-card .mc-value { font-size:18px; font-weight:600; }
+
+/* ── MAP CARD BUTTON ── */
+.map-card-separator {
+  /* vertical on wide screens, horizontal on small */
+  width:1px; background:var(--border2); flex-shrink:0; align-self:stretch; margin:8px 0;
+}
+
+/* on small screens: separator becomes a horizontal rule spanning full width */
+@media (max-width:959px) {
+  .map-card-separator {
+    width:100%; height:1px; margin:0; align-self:auto;
+  }
+  .map-card-btn {
+    flex-direction:row !important;
+    width:100%; min-width:unset !important;
+    padding:10px 20px !important;
+    gap:12px !important;
+    justify-content:flex-start !important;
+    border-left:none !important;
+    border-top:2px solid rgba(96,165,250,0.35) !important;
+  }
+  .map-card-btn:hover { border-top-color:rgba(96,165,250,0.75) !important; }
+  .map-card-btn.active { border-top-color:#60a5fa !important; }
+  .map-card-btn::before { left:0; right:0; top:0; height:2px; width:auto; }
+  .map-card-btn::after { bottom:-1px; left:0; right:0; height:2px; top:auto; width:auto; transform:scaleX(0); }
+  .map-card-btn.active::after { transform:scaleX(1); }
+  .map-card-icon { flex-shrink:0; }
+  .map-card-label { font-size:12px; }
+  .map-card-sub { display:none; }
+}
+
+.map-card-btn {
+  flex:0 0 auto;
+  min-width:110px;
+  padding:0 20px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  cursor:pointer;
+  user-select:none;
+  position:relative;
+  border:none;
+  background:linear-gradient(135deg, rgba(96,165,250,0.10) 0%, rgba(96,165,250,0.04) 100%);
+  border-left:2px solid rgba(96,165,250,0.35);
+  transition:background .18s, border-color .18s;
+}
+.map-card-btn:hover {
+  background:linear-gradient(135deg, rgba(96,165,250,0.20) 0%, rgba(96,165,250,0.10) 100%);
+  border-left-color:rgba(96,165,250,0.75);
+}
+.map-card-btn.active {
+  background:linear-gradient(135deg, rgba(96,165,250,0.25) 0%, rgba(96,165,250,0.12) 100%);
+  border-left-color:#60a5fa;
+}
+.map-card-btn::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:#60a5fa; opacity:.25; transition:opacity .2s;
+}
+.map-card-btn:hover::before, .map-card-btn.active::before { opacity:.85; }
+.map-card-btn::after {
+  content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px;
+  background:#60a5fa; transform:scaleX(0); transition:transform .2s ease;
+}
+.map-card-btn.active::after { transform:scaleX(1); }
+.map-card-icon {
+  width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+  background:rgba(96,165,250,0.12); border-radius:8px;
+  border:1px solid rgba(96,165,250,0.25);
+  transition:background .18s, border-color .18s;
+}
+.map-card-btn:hover .map-card-icon, .map-card-btn.active .map-card-icon {
+  background:rgba(96,165,250,0.22);
+  border-color:rgba(96,165,250,0.55);
+}
+.map-card-label {
+  font-size:11px; font-weight:600; color:#60a5fa;
+  letter-spacing:.08em; text-transform:uppercase; line-height:1;
+}
+.map-card-sub {
+  font-size:10px; color:var(--muted); font-weight:400; letter-spacing:.02em;
+  transition:color .2s;
+}
+.map-card-btn:hover .map-card-sub, .map-card-btn.active .map-card-sub { color:#9cc9fc; }
 
 /* ── PANEL ── */
 .plot-panel { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
@@ -104,14 +206,27 @@ header { display:flex; align-items:center; gap:12px; padding:0 20px; background:
 .map-panel { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
 
 .map-toolbar {
-  display:flex; align-items:center; gap:12px; padding:10px 20px;
+  display:flex; flex-direction:column;
   border-bottom:1px solid var(--border); background:var(--navy2);
-  flex-shrink:0; flex-wrap:wrap;
+  flex-shrink:0;
 }
-.map-toolbar .plot-name { flex-shrink:0; }
+
+/* Row 1: title + color-by + legend */
+.map-toolbar-row1 {
+  display:flex; align-items:center; flex-wrap:wrap; gap:10px;
+  padding:9px 16px 8px;
+  border-bottom:1px solid var(--border);
+}
+.map-toolbar-row1 .plot-name { flex-shrink:0; margin-right:4px; }
+
+/* Row 2: scrubbers + replay + speed */
+.map-toolbar-row2 {
+  display:flex; align-items:center; flex-wrap:wrap; gap:10px;
+  padding:8px 16px;
+}
 
 /* metric color picker */
-.color-by { display:flex; align-items:center; gap:7px; }
+.color-by { display:flex; align-items:center; gap:7px; flex-shrink:0; }
 .color-by-label { font-size:12px; font-weight:500; color:var(--muted); white-space:nowrap; }
 .color-by select {
   background:var(--navy3); border:1px solid var(--border2); border-radius:4px;
@@ -120,13 +235,21 @@ header { display:flex; align-items:center; gap:12px; padding:0 20px; background:
 }
 .color-by select:focus { border-color:var(--gold); }
 
-/* scrubber */
-.scrubber-wrap { display:flex; align-items:center; gap:8px; flex:1; min-width:200px; }
-.scrubber-label { font-size:12px; font-weight:500; color:var(--muted); white-space:nowrap; }
-input[type=range] {
-  flex:1; accent-color:var(--gold); height:3px; cursor:pointer;
+/* scrubber — each one is its own flex row so it can wrap independently */
+.scrubber-wrap {
+  display:flex; align-items:center; gap:7px;
+  flex:1 1 260px; min-width:0;
 }
-.scrubber-val { font-size:12px; font-weight:600; color:var(--text); min-width:36px; text-align:right; white-space:nowrap; }
+.scrubber-label { font-size:12px; font-weight:500; color:var(--muted); white-space:nowrap; flex-shrink:0; }
+input[type=range] {
+  flex:1; min-width:80px; accent-color:var(--gold); height:3px; cursor:pointer;
+}
+input[type=time] {
+  background:var(--navy3); border:1px solid var(--border2); border-radius:4px;
+  color:var(--text); font-family:var(--font); font-size:10px; padding:2px 6px;
+  outline:none; width:84px; flex-shrink:0;
+}
+input[type=time]:focus { border-color:var(--gold); }
 
 /* replay */
 .replay-btn {
@@ -144,12 +267,10 @@ input[type=range] {
 .speed-select { background:var(--navy3); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-family:var(--font); font-size:12px; padding:3px 8px; outline:none; }
 
 /* legend */
-.map-legend {
-  display:flex; align-items:center; gap:8px; flex-shrink:0;
-}
+.map-legend { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .legend-grad {
   width:80px; height:6px; border-radius:3px;
-  background:linear-gradient(to right,#4caf7d,#c9a84c,#e05c4a);
+  background:linear-gradient(to right, hsl(180,100%,62%), hsl(120,100%,62%), hsl(60,100%,62%), hsl(0,100%,62%));
 }
 .legend-lo, .legend-hi { font-size:11px; color:var(--muted); }
 
@@ -248,25 +369,23 @@ METRICS.forEach(m => {
   strip.appendChild(card);
 });
 
-// map card — visually distinct from metric cards
+// map card — clearly separated distinct button
+const sep = document.createElement('div');
+sep.className = 'map-card-separator';
+strip.appendChild(sep);
+
 const mapCard = document.createElement('div');
-mapCard.className = 'metric-card map-card';
+mapCard.className = 'map-card-btn';
 mapCard.id = 'card-map';
-mapCard.style.setProperty('--card-color', '#60a5fa');
-mapCard.style.borderLeft = '2px solid rgba(96,165,250,0.4)';
-mapCard.style.flexBasis = '120px';
-mapCard.style.flexGrow = '0';
 mapCard.innerHTML = `
-  <div class="mc-label" style="color:#60a5fa;letter-spacing:.08em;font-size:9px;text-transform:uppercase">&#9654; Map View</div>
-  <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".8">
+  <div class="map-card-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
       <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
     </svg>
-    <div class="mc-value no-data" id="mcv-gps" style="font-size:16px;color:#60a5fa">GPS</div>
   </div>
-  <div class="mc-bar-track" style="margin-top:8px"><div class="mc-bar-fill" id="mcb-gps" style="width:0%;background:#60a5fa"></div></div>
-  <div class="mc-delta" id="mcd-gps"></div>
+  <div class="map-card-label">Map View</div>
+  <div class="map-card-sub" id="mcd-gps">GPS Track</div>
 `;
 mapCard.addEventListener('click', activateMap);
 strip.appendChild(mapCard);
@@ -315,6 +434,7 @@ function activateMetric(field) {
   activeField = field;
 
   document.querySelectorAll('.metric-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('card-map').classList.remove('active');
   document.getElementById('card-' + field).classList.add('active');
 
   const area = document.getElementById('mainArea');
@@ -450,40 +570,39 @@ function activateMap() {
 
   panel.innerHTML = `
     <div class="map-toolbar">
-      <span class="plot-name">GPS Track</span>
-
-      <div class="color-by">
-        <span class="color-by-label">Color by</span>
-        <select id="colorBySelect" onchange="setColorBy(this.value)">${metricOpts}</select>
+      <div class="map-toolbar-row1">
+        <span class="plot-name">GPS Track</span>
+        <div class="color-by">
+          <span class="color-by-label">Color by</span>
+          <select id="colorBySelect" onchange="setColorBy(this.value)">${metricOpts}</select>
+        </div>
+        <div class="map-legend">
+          <span class="legend-lo" id="legendLo">low</span>
+          <div class="legend-grad" id="legendGrad"></div>
+          <span class="legend-hi" id="legendHi">high</span>
+        </div>
       </div>
-
-      <div class="map-legend">
-        <span class="legend-lo" id="legendLo">low</span>
-        <div class="legend-grad" id="legendGrad"></div>
-        <span class="legend-hi" id="legendHi">high</span>
-      </div>
-
-      <div class="scrubber-wrap">
-        <span class="scrubber-label">Start</span>
-        <input type="time" id="timeStart" step="1" oninput="onTimeInput('start')" style="background:var(--navy3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:10px;padding:2px 6px;outline:none;width:88px;">
-        <input type="range" id="scrubStart" min="0" max="1000" value="0" step="1"
-          oninput="onScrub('start')">
-        <span class="scrubber-label">End</span>
-        <input type="time" id="timeEnd" step="1" oninput="onTimeInput('end')" style="background:var(--navy3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:10px;padding:2px 6px;outline:none;width:88px;">
-        <input type="range" id="scrubEnd" min="0" max="1000" value="1000" step="1"
-          oninput="onScrub('end')">
-      </div>
-
-      <button class="replay-btn" id="replayBtn" onclick="toggleReplay()">▶ Replay</button>
-
-      <div class="speed-wrap">
-        <span class="speed-label">Speed</span>
-        <select class="speed-select" id="replaySpeed">
-          <option value="1">1×</option>
-          <option value="5">5×</option>
-          <option value="10" selected>10×</option>
-          <option value="30">30×</option>
-        </select>
+      <div class="map-toolbar-row2">
+        <div class="scrubber-wrap">
+          <span class="scrubber-label">Start</span>
+          <input type="time" id="timeStart" step="1" oninput="onTimeInput('start')">
+          <input type="range" id="scrubStart" min="0" max="1000" value="0" step="1" oninput="onScrub('start')">
+        </div>
+        <div class="scrubber-wrap">
+          <span class="scrubber-label">End</span>
+          <input type="time" id="timeEnd" step="1" oninput="onTimeInput('end')">
+          <input type="range" id="scrubEnd" min="0" max="1000" value="1000" step="1" oninput="onScrub('end')">
+        </div>
+        <button class="replay-btn" id="replayBtn" onclick="toggleReplay()">▶ Replay</button>
+        <div class="speed-wrap">
+          <span class="speed-label">Speed</span>
+          <select class="speed-select" id="replaySpeed">
+            <option value="1">1×</option>
+            <option value="5">5×</option>
+            <option value="10" selected>10×</option>
+            <option value="30">30×</option>
+          </select>
+        </div>
       </div>
     </div>
     <div class="map-wrap"><div id="leafletMap"></div></div>
@@ -496,12 +615,14 @@ function activateMap() {
     maxZoom:19,
   }).addTo(leafletMap);
 
-  // navy tint: injected between tile pane (z:200) and SVG overlay pane (z:400)
+  // overlay: sits between tile pane (z:200) and SVG overlay pane (z:400)
   // so tiles are dimmed but the coloured path polylines remain fully visible
   const tintPane = leafletMap.createPane('tintPane');
   tintPane.style.zIndex = 250;
   tintPane.style.pointerEvents = 'none';
-  tintPane.innerHTML = '<div style="position:absolute;inset:0;background:rgba(13,27,42,0.50)"></div>';
+  tintPane.innerHTML = `
+    <div style="position:absolute;inset:0;background:rgba(13,27,42,0.68)"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 30%,rgba(13,27,42,0.45) 70%,rgba(13,27,42,0.78) 100%)"></div>`;
 
 
   drawMapTrace();
@@ -511,19 +632,11 @@ function activateMap() {
 
 // ─── MAP DRAWING ─────────────────────────────────────────────────────────────
 
-// color ramp: green → gold → red
+// color ramp: vivid cyan → green → yellow → orange → red
 function metricToColor(norm) {
-  // 0→green, 0.5→gold, 1→red
-  const r = norm < .5
-    ? Math.round(76  + (201-76)  * norm * 2)
-    : Math.round(201 + (224-201) * (norm-.5) * 2);
-  const g = norm < .5
-    ? Math.round(175 + (168-175) * norm * 2)
-    : Math.round(168 + (92-168)  * (norm-.5) * 2);
-  const b = norm < .5
-    ? Math.round(61  + (76-61)   * norm * 2)
-    : Math.round(76  + (74-76)   * (norm-.5) * 2);
-  return `rgb(${r},${g},${b})`;
+  // hue sweeps 180° (cyan) → 120° (green) → 60° (yellow) → 0° (red)
+  const hue = Math.round(180 - norm * 180);
+  return `hsl(${hue}, 100%, 62%)`;
 }
 
 function drawMapTrace() {
@@ -573,9 +686,10 @@ function drawMapTrace() {
     const v    = nearestMetric(mHist, pts[i].t);
     const norm = v !== null ? (v - vMin) / vRange : 0.5;
     const col  = metricToColor(norm);
-    const seg  = L.polyline(
-      [[pts[i].lat, pts[i].lon], [pts[i+1].lat, pts[i+1].lon]],
-      { color: col, weight: 4, opacity: 0.9, lineJoin:'round', lineCap:'round' }
+    const latLngs = [[pts[i].lat, pts[i].lon], [pts[i+1].lat, pts[i+1].lon]];
+    // main stroke
+    const seg = L.polyline(latLngs,
+      { color: col, weight: 4.5, opacity: 1, lineJoin:'round', lineCap:'round' }
     ).addTo(leafletMap);
     mapPolylines.push(seg);
   }
@@ -773,11 +887,9 @@ function pushGPS(t, lat, lon) {
   const cut = Date.now() - MAX_MS;
   while (gpsHistory.length && gpsHistory[0].t < cut) gpsHistory.shift();
 
-  // update map card
-  const gEl = document.getElementById('mcv-gps');
-  if (gEl) { gEl.classList.remove('no-data'); gEl.textContent = gpsHistory.length + ' pts'; }
-  const bEl = document.getElementById('mcb-gps');
-  if (bEl) bEl.style.width = Math.min(100, gpsHistory.length / 10) + '%';
+  // update map card sub-label
+  const dEl = document.getElementById('mcd-gps');
+  if (dEl) dEl.textContent = gpsHistory.length + ' pts';
 
   // if map panel is active, incrementally add the new segment
   if (leafletMap && gpsHistory.length >= 2 && !isPlaying) {
