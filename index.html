@@ -4,248 +4,166 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UBC Solar · Telemetry</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root {
-  --navy:      #0d1b2a;
-  --navy2:     #162232;
-  --navy3:     #1e2e40;
-  --gold:      #c9a84c;
-  --gold-dim:  #8a6e2e;
-  --gold-bg:   #c9a84c18;
-  --text:      #f0f4f8;
-  --muted:     #7a8fa3;
-  --border:    #ffffff12;
-  --border2:   #ffffff20;
-  --green:     #4caf7d;
-  --red:       #e05c4a;
-  --font:      'Poppins', sans-serif;
+  --navy:     #0d1b2a;
+  --navy2:    #162232;
+  --navy3:    #1e2e40;
+  --gold:     #c9a84c;
+  --gold-dim: #8a6e2e;
+  --gold-bg:  #c9a84c18;
+  --text:     #f0f4f8;
+  --muted:    #7a8fa3;
+  --border:   #ffffff12;
+  --border2:  #ffffff20;
+  --green:    #4caf7d;
+  --red:      #e05c4a;
+  --font:     'Poppins', sans-serif;
 }
 
-html, body {
-  height: 100%;
-  background: var(--navy);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 12px;
-  overflow: hidden;
-}
+html, body { height:100%; background:var(--navy); color:var(--text); font-family:var(--font); font-size:14px; overflow:hidden; }
 
-.shell {
-  display: grid;
-  grid-template-rows: 48px auto 1fr;
-  height: 100vh;
-}
+.shell { display:grid; grid-template-rows:52px auto 1fr; height:100vh; }
+#mainArea { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+#mainArea > .plot-panel, #mainArea > .map-panel { flex:1; min-height:0; }
 
 /* ── HEADER ── */
-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-  background: var(--navy2);
-  border-bottom: 1px solid var(--border);
-}
-
-.logo {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--gold);
-  white-space: nowrap;
-  letter-spacing: 0.01em;
-}
-.logo span { color: var(--text); font-weight: 500; }
-
-input[type=number] {
-  background: var(--navy3);
-  border: 1px solid var(--border2);
-  border-radius: 4px;
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 11px;
-  padding: 4px 9px;
-  outline: none;
-  transition: border-color .15s;
-}
-input[type=number]:focus { border-color: var(--gold); }
+header { display:flex; align-items:center; gap:12px; padding:0 20px; background:var(--navy2); border-bottom:1px solid var(--border); }
+.logo { font-size:17px; font-weight:700; color:var(--gold); white-space:nowrap; letter-spacing:.01em; }
+.logo span { color:var(--text); font-weight:500; }
 
 /* ── CARD STRIP ── */
-.card-strip {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  background: var(--navy2);
-  overflow-x: auto;
-  scrollbar-width: none;
-  flex-shrink: 0;
-}
-.card-strip::-webkit-scrollbar { display: none; }
+.card-strip { display:flex; border-bottom:1px solid var(--border); background:var(--navy2); overflow-x:auto; scrollbar-width:none; flex-shrink:0; }
+.card-strip::-webkit-scrollbar { display:none; }
 
 .metric-card {
-  flex: 1 0 150px;
-  padding: 11px 16px 10px;
-  border-right: 1px solid var(--border);
-  cursor: pointer;
-  position: relative;
-  user-select: none;
-  transition: background .15s;
+  flex:1 0 155px; padding:12px 18px 11px; border-right:1px solid var(--border);
+  cursor:pointer; position:relative; user-select:none; transition:background .15s;
 }
-.metric-card:last-child { border-right: none; }
-.metric-card:hover      { background: var(--navy3); }
-.metric-card.active     { background: var(--navy3); }
+.metric-card:last-child { border-right:none; }
+.metric-card:hover, .metric-card.active { background:var(--navy3); }
 
 .metric-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: var(--card-color, var(--gold));
-  opacity: 0.3;
-  transition: opacity .2s;
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:var(--card-color,var(--gold)); opacity:.3; transition:opacity .2s;
 }
-.metric-card:hover::before,
-.metric-card.active::before { opacity: 0.9; }
-
+.metric-card:hover::before, .metric-card.active::before { opacity:.9; }
 .metric-card::after {
-  content: '';
-  position: absolute;
-  bottom: -1px; left: 0; right: 0;
-  height: 2px;
-  background: var(--card-color, var(--gold));
-  transform: scaleX(0);
-  transition: transform .2s ease;
+  content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px;
+  background:var(--card-color,var(--gold)); transform:scaleX(0); transition:transform .2s ease;
 }
-.metric-card.active::after { transform: scaleX(1); }
+.metric-card.active::after { transform:scaleX(1); }
 
-.mc-label {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--muted);
-  letter-spacing: 0.02em;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.mc-label { font-size:12px; font-weight:500; color:var(--muted); letter-spacing:.02em; margin-bottom:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mc-value-row { display:flex; align-items:baseline; gap:5px; }
+.mc-value { font-size:32px; font-weight:700; line-height:1; color:var(--card-color,var(--text)); white-space:nowrap; transition:color .3s; }
+.mc-value.no-data { font-size:22px; color:var(--muted); font-weight:400; }
+.mc-unit { font-size:13px; color:var(--muted); font-weight:400; }
+.mc-bar-track { height:2px; background:var(--border); border-radius:1px; margin-top:9px; overflow:hidden; }
+.mc-bar-fill { height:100%; border-radius:1px; background:var(--card-color,var(--gold)); transition:width .8s cubic-bezier(.4,0,.2,1); opacity:.5; }
+.mc-delta { font-size:12px; font-weight:500; margin-top:5px; color:var(--muted); transition:color .4s; }
+.delta-up { color:var(--green); } .delta-dn { color:var(--red); }
 
-.mc-value-row { display: flex; align-items: baseline; gap: 4px; }
+/* map card special */
+.map-card .mc-value { font-size:18px; font-weight:600; }
 
-.mc-value {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--card-color, var(--text));
-  white-space: nowrap;
-  transition: color .3s;
-}
-.mc-value.no-data { font-size: 20px; color: var(--muted); font-weight: 400; }
+/* ── PANEL ── */
+.plot-panel { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.plot-empty { flex:1; display:flex; align-items:center; justify-content:center; }
+.plot-empty-hint { font-size:14px; font-weight:500; color:var(--muted); }
 
-.mc-unit { font-size: 11px; color: var(--muted); font-weight: 400; }
-
-.mc-bar-track {
-  height: 2px;
-  background: var(--border);
-  border-radius: 1px;
-  margin-top: 8px;
-  overflow: hidden;
-}
-.mc-bar-fill {
-  height: 100%;
-  border-radius: 1px;
-  background: var(--card-color, var(--gold));
-  transition: width .8s cubic-bezier(.4,0,.2,1);
-  opacity: 0.5;
-}
-
-.mc-delta {
-  font-size: 10px;
-  font-weight: 500;
-  margin-top: 4px;
-  color: var(--muted);
-  transition: color .4s;
-}
-.delta-up { color: var(--green); }
-.delta-dn { color: var(--red); }
-
-/* ── PLOT PANEL ── */
-.plot-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.plot-empty {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.plot-empty-hint {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--muted);
-}
-
+/* shared toolbar */
 .plot-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--navy2);
-  flex-shrink: 0;
-  flex-wrap: wrap;
+  display:flex; align-items:center; gap:14px; padding:10px 20px;
+  border-bottom:1px solid var(--border); background:var(--navy2);
+  flex-shrink:0; flex-wrap:wrap;
 }
+.plot-name { font-size:16px; font-weight:700; color:var(--card-color,var(--text)); }
+.plot-unit-badge { font-size:12px; font-weight:500; color:var(--muted); border:1px solid var(--border2); border-radius:4px; padding:2px 8px; }
+.plot-help { font-size:12px; color:var(--muted); line-height:1.5; border-left:2px solid var(--gold-dim); padding-left:10px; max-width:340px; flex:1; }
 
-.plot-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--card-color, var(--text));
+/* time-domain controls */
+.presets { display:flex; gap:5px; }
+.preset { background:transparent; border:1px solid var(--border2); border-radius:4px; color:var(--muted); font-family:var(--font); font-size:12px; font-weight:500; padding:4px 10px; cursor:pointer; transition:color .15s,border-color .15s,background .15s; }
+.preset:hover { color:var(--text); border-color:var(--gold-dim); }
+.preset.on { color:var(--gold); border-color:var(--gold-dim); background:var(--gold-bg); }
+.win-wrap { display:flex; align-items:center; gap:5px; }
+.win-num { width:58px; text-align:right; background:var(--navy3); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-family:var(--font); font-size:13px; padding:4px 8px; outline:none; }
+.win-num:focus { border-color:var(--gold); }
+
+/* canvas */
+.canvas-wrap { flex:1; position:relative; min-height:0; }
+#plotCanvas { position:absolute; inset:0; width:100%; height:100%; }
+
+/* ── MAP PANEL ── */
+.map-panel { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+
+.map-toolbar {
+  display:flex; align-items:center; gap:12px; padding:10px 20px;
+  border-bottom:1px solid var(--border); background:var(--navy2);
+  flex-shrink:0; flex-wrap:wrap;
 }
-.plot-unit-badge {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--muted);
-  border: 1px solid var(--border2);
-  border-radius: 4px;
-  padding: 1px 6px;
+.map-toolbar .plot-name { flex-shrink:0; }
+
+/* metric color picker */
+.color-by { display:flex; align-items:center; gap:7px; }
+.color-by-label { font-size:12px; font-weight:500; color:var(--muted); white-space:nowrap; }
+.color-by select {
+  background:var(--navy3); border:1px solid var(--border2); border-radius:4px;
+  color:var(--text); font-family:var(--font); font-size:12px; padding:4px 10px;
+  outline:none; cursor:pointer;
 }
+.color-by select:focus { border-color:var(--gold); }
 
-.plot-help {
-  font-size: 10px;
-  font-weight: 400;
-  color: var(--muted);
-  line-height: 1.5;
-  border-left: 2px solid var(--gold-dim);
-  padding-left: 8px;
-  max-width: 360px;
-  flex: 1;
+/* scrubber */
+.scrubber-wrap { display:flex; align-items:center; gap:8px; flex:1; min-width:200px; }
+.scrubber-label { font-size:12px; font-weight:500; color:var(--muted); white-space:nowrap; }
+input[type=range] {
+  flex:1; accent-color:var(--gold); height:3px; cursor:pointer;
 }
+.scrubber-val { font-size:12px; font-weight:600; color:var(--text); min-width:36px; text-align:right; white-space:nowrap; }
 
-.presets { display: flex; gap: 4px; }
-.preset {
-  background: transparent;
-  border: 1px solid var(--border2);
-  border-radius: 4px;
-  color: var(--muted);
-  font-family: var(--font);
-  font-size: 10px;
-  font-weight: 500;
-  padding: 3px 8px;
-  cursor: pointer;
-  transition: color .15s, border-color .15s, background .15s;
+/* replay */
+.replay-btn {
+  background:transparent; border:1px solid var(--border2); border-radius:4px;
+  color:var(--muted); font-family:var(--font); font-size:12px; font-weight:500;
+  padding:4px 14px; cursor:pointer; white-space:nowrap; flex-shrink:0;
+  transition:color .15s,border-color .15s,background .15s;
 }
-.preset:hover { color: var(--text); border-color: var(--gold-dim); }
-.preset.on    { color: var(--gold); border-color: var(--gold-dim); background: var(--gold-bg); }
+.replay-btn:hover { color:var(--text); border-color:var(--gold); }
+.replay-btn.playing { color:var(--gold); border-color:var(--gold-dim); background:var(--gold-bg); }
 
-.win-wrap { display: flex; align-items: center; gap: 5px; }
-.win-num  { width: 52px; text-align: right; }
+/* speed */
+.speed-wrap { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.speed-label { font-size:12px; color:var(--muted); }
+.speed-select { background:var(--navy3); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-family:var(--font); font-size:12px; padding:3px 8px; outline:none; }
 
-.canvas-wrap { flex: 1; position: relative; min-height: 0; }
-#plotCanvas  { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* legend */
+.map-legend {
+  display:flex; align-items:center; gap:8px; flex-shrink:0;
+}
+.legend-grad {
+  width:80px; height:6px; border-radius:3px;
+  background:linear-gradient(to right,#4caf7d,#c9a84c,#e05c4a);
+}
+.legend-lo, .legend-hi { font-size:11px; color:var(--muted); }
+
+/* leaflet container */
+.map-wrap { flex:1; position:relative; min-height:0; }
+#leafletMap { position:absolute; inset:0; }
+/* navy tint sits over tiles but under Leaflet SVG pane (z-index 200) */
+
+
+/* override leaflet chrome to fit theme */
+.leaflet-control-attribution { background:rgba(13,27,42,.75) !important; color:var(--muted) !important; font-size:9px !important; }
+.leaflet-control-attribution a { color:var(--muted) !important; }
+.leaflet-bar a { background:var(--navy2) !important; color:var(--text) !important; border-color:var(--border2) !important; }
+.leaflet-bar a:hover { background:var(--navy3) !important; }
 </style>
 </head>
 <body>
@@ -257,43 +175,61 @@ input[type=number]:focus { border-color: var(--gold); }
 
   <div class="card-strip" id="cardStrip"></div>
 
-  <div class="plot-panel" id="plotPanel">
-    <div class="plot-empty">
-      <div class="plot-empty-hint">Select a metric above to view its time-domain plot</div>
+  <div id="mainArea">
+    <div class="plot-panel" id="plotPanel">
+      <div class="plot-empty">
+        <div class="plot-empty-hint">Select a metric above to view its plot, or open the Map view</div>
+      </div>
     </div>
   </div>
 
 </div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+if (typeof L === 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0d1b2a;font-family:Poppins,sans-serif;color:#f0f4f8;flex-direction:column;gap:16px;padding:32px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:#e05c4a">Leaflet failed to load</div>
+        <div style="font-size:13px;color:#7a8fa3;max-width:400px;line-height:1.7">
+          This page needs an internet connection to load the Leaflet map library from <code style="color:#c9a84c">unpkg.com</code>.<br><br>
+          Serve the file via a local web server rather than opening it directly from disk, or ensure <code style="color:#c9a84c">unpkg.com</code> is reachable.
+        </div>
+        <div style="font-size:11px;color:#7a8fa3;border:1px solid #ffffff20;border-radius:6px;padding:10px 20px;">
+          <code>python3 -m http.server 8080</code> &rarr; open <code>localhost:8080</code>
+        </div>
+      </div>`;
+  });
+  throw new Error('Leaflet (L) is not defined — CDN script failed to load.');
+}
 // ─── METRICS ───────────────────────────────────────────────────────────────
 const METRICS = [
-  { field:'motor_power',    label:'Motor Power',    unit:'kW', color:'#e05c4a',
-    transform:v=>v/1000, decimals:2, yMin:0,   yMax:5,
-    help:'Electrical power drawn by the motor controller. High values indicate acceleration or hill climbing. Compare with array power to track net energy balance.' },
-  { field:'array_power',    label:'Array Power',    unit:'kW', color:'#c9a84c',
-    transform:v=>v/1000, decimals:2, yMin:0,   yMax:3,
-    help:'Solar panel output. Peaks in direct sunlight; drops in shade or cloud cover. A sustained mid-race drop may mean panel shading by another vehicle.' },
-  { field:'battery_soc',    label:'Battery SOC',    unit:'%',  color:'#4caf7d',
-    decimals:1, yMin:0, yMax:100,
-    help:'State of charge of the battery pack. A steady decline indicates net energy consumption. Use to pace energy strategy across the race.' },
-  { field:'speed',          label:'Speed',          unit:'km/h', color:'#60a5fa',
-    decimals:1, yMin:0, yMax:100,
-    help:'Vehicle speed. Compare with motor power to spot inefficient phases — high power with low speed gain suggests drag or headwind.' },
-  { field:'steering_angle', label:'Steering Angle', unit:'°',  color:'#34d399',
-    decimals:1, yMin:-45, yMax:45,
-    help:'Steering wheel deflection in degrees. Large sustained angles indicate lane corrections which increase rolling resistance. Smoother profiles save energy.' },
-  { field:'acceleration',   label:'Acceleration',   unit:'g',  color:'#a78bfa',
-    decimals:2, yMin:-1, yMax:1,
-    help:'Longitudinal acceleration. Positive = accelerating, negative = braking. Smooth gradual profiles minimise energy loss through kinetic waste.' },
+  { field:'motor_power',    label:'Motor Power',    unit:'kW',   color:'#e05c4a', transform:v=>v/1000, decimals:2, yMin:0,   yMax:5,
+    help:'Electrical power drawn by the motor controller. High values indicate acceleration or hill climbing.' },
+  { field:'array_power',    label:'Array Power',    unit:'kW',   color:'#c9a84c', transform:v=>v/1000, decimals:2, yMin:0,   yMax:3,
+    help:'Solar panel output. Peaks in direct sunlight; drops in shade or cloud cover.' },
+  { field:'battery_soc',    label:'Battery SOC',    unit:'%',    color:'#4caf7d', decimals:1, yMin:0,   yMax:100,
+    help:'State of charge of the battery pack. A steady decline indicates net energy consumption.' },
+  { field:'speed',          label:'Speed',          unit:'km/h', color:'#60a5fa', decimals:1, yMin:0,   yMax:100,
+    help:'Vehicle speed. Compare with motor power to spot inefficient phases.' },
+  { field:'steering_angle', label:'Steering Angle', unit:'°',    color:'#34d399', decimals:1, yMin:-45, yMax:45,
+    help:'Steering wheel deflection. Large sustained angles increase rolling resistance.' },
+  { field:'acceleration',   label:'Acceleration',   unit:'g',    color:'#a78bfa', decimals:2, yMin:-1,  yMax:1,
+    help:'Longitudinal acceleration. Smooth profiles minimise energy loss.' },
 ];
 
-const MAX_MS = 3600 * 1000;
-const history = {};
+const MAX_MS  = 3600 * 1000;
+const history = {};   // field → [{t, v}]
+const gpsHistory = []; // [{t, lat, lon}]
 const latest  = {};
+
 METRICS.forEach(m => { history[m.field] = []; latest[m.field] = { value:null, prev:null }; });
 
-// ─── BUILD CARD STRIP ──────────────────────────────────────────────────────
+// ─── CARD STRIP ─────────────────────────────────────────────────────────────
 const strip = document.getElementById('cardStrip');
+
+// metric cards
 METRICS.forEach(m => {
   const card = document.createElement('div');
   card.className = 'metric-card';
@@ -312,28 +248,45 @@ METRICS.forEach(m => {
   strip.appendChild(card);
 });
 
-// ─── PLOT PANEL ────────────────────────────────────────────────────────────
+// map card — visually distinct from metric cards
+const mapCard = document.createElement('div');
+mapCard.className = 'metric-card map-card';
+mapCard.id = 'card-map';
+mapCard.style.setProperty('--card-color', '#60a5fa');
+mapCard.style.borderLeft = '2px solid rgba(96,165,250,0.4)';
+mapCard.style.flexBasis = '120px';
+mapCard.style.flexGrow = '0';
+mapCard.innerHTML = `
+  <div class="mc-label" style="color:#60a5fa;letter-spacing:.08em;font-size:9px;text-transform:uppercase">&#9654; Map View</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".8">
+      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+      <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
+    </svg>
+    <div class="mc-value no-data" id="mcv-gps" style="font-size:16px;color:#60a5fa">GPS</div>
+  </div>
+  <div class="mc-bar-track" style="margin-top:8px"><div class="mc-bar-fill" id="mcb-gps" style="width:0%;background:#60a5fa"></div></div>
+  <div class="mc-delta" id="mcd-gps"></div>
+`;
+mapCard.addEventListener('click', activateMap);
+strip.appendChild(mapCard);
+
+// ─── TIME-DOMAIN PANEL ──────────────────────────────────────────────────────
 let activeField = null;
 let windowSec   = 60;
 let rafId       = null;
 
-function activateMetric(field) {
+function buildChartPanel(field) {
   const m = METRICS.find(x => x.field === field);
   if (!m) return;
-
-  document.querySelectorAll('.metric-card').forEach(c => c.classList.remove('active'));
-  const card = document.getElementById('card-' + field);
-  if (card) card.classList.add('active');
-
-  activeField = field;
-
   const panel = document.getElementById('plotPanel');
+  panel.className = 'plot-panel';
   panel.innerHTML = `
     <div class="plot-toolbar" style="--card-color:${m.color}">
       <span class="plot-name">${m.label}</span>
       <span class="plot-unit-badge">${m.unit}</span>
       <span class="plot-help">${m.help}</span>
-      <div class="presets" id="presets">
+      <div class="presets">
         <button class="preset" onclick="setWin(30,this)">30s</button>
         <button class="preset" onclick="setWin(60,this)">1m</button>
         <button class="preset" onclick="setWin(300,this)">5m</button>
@@ -346,16 +299,32 @@ function activateMetric(field) {
     </div>
     <div class="canvas-wrap"><canvas id="plotCanvas"></canvas></div>
   `;
-
   document.getElementById('winNum').addEventListener('change', function() {
     const v = parseInt(this.value);
-    if (v >= 5 && v <= 3600) {
-      windowSec = v;
-      document.querySelectorAll('.preset').forEach(b => b.classList.remove('on'));
-    }
+    if (v >= 5 && v <= 3600) { windowSec = v; document.querySelectorAll('.preset').forEach(b => b.classList.remove('on')); }
   });
-
   setWinHighlight(windowSec);
+}
+
+function activateMetric(field) {
+  const m = METRICS.find(x => x.field === field);
+  if (!m) return;
+
+  stopLoop();
+  clearMapPanel();
+  activeField = field;
+
+  document.querySelectorAll('.metric-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('card-' + field).classList.add('active');
+
+  const area = document.getElementById('mainArea');
+  area.innerHTML = '';
+  const pp = document.createElement('div');
+  pp.id = 'plotPanel';
+  pp.className = 'plot-panel';
+  area.appendChild(pp);
+
+  buildChartPanel(field);
   startLoop();
 }
 
@@ -369,13 +338,10 @@ function setWin(sec, btn) {
 
 function setWinHighlight(sec) {
   const map = { 30:'30s', 60:'1m', 300:'5m', 600:'10m' };
-  const label = map[sec];
-  document.querySelectorAll('.preset').forEach(b => {
-    b.classList.toggle('on', b.textContent === label);
-  });
+  document.querySelectorAll('.preset').forEach(b => b.classList.toggle('on', b.textContent === map[sec]));
 }
 
-// ─── RENDERER ──────────────────────────────────────────────────────────────
+// ─── CANVAS RENDERER ────────────────────────────────────────────────────────
 const PAD = { t:12, b:24, l:48, r:12 };
 
 function render() {
@@ -385,110 +351,58 @@ function render() {
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.offsetWidth, H = canvas.offsetHeight;
   if (!W || !H) return;
-
-  canvas.width  = W * dpr;
-  canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const now    = Date.now();
-  const tStart = now - windowSec * 1000;
-  const pts    = history[activeField].filter(d => d.t >= tStart);
-
-  const cX = PAD.l, cY = PAD.t;
-  const cW = W - PAD.l - PAD.r;
-  const cH = H - PAD.t - PAD.b;
-
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+  const now = Date.now(), tStart = now - windowSec * 1000;
+  const pts = history[activeField].filter(d => d.t >= tStart);
+  const cX = PAD.l, cY = PAD.t, cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
   let yMin = m.yMin, yMax = m.yMax;
   if (pts.length > 1) {
-    const vs  = pts.map(d => d.v);
-    const lo  = Math.min(...vs), hi = Math.max(...vs);
-    const pad = (hi - lo) * 0.12 || 0.5;
-    yMin = Math.max(m.yMin, lo - pad);
-    yMax = Math.min(m.yMax, hi + pad);
+    const vs = pts.map(d => d.v), lo = Math.min(...vs), hi = Math.max(...vs), pad = (hi - lo) * .12 || .5;
+    yMin = Math.max(m.yMin, lo - pad); yMax = Math.min(m.yMax, hi + pad);
     if (yMin >= yMax) { yMin = m.yMin; yMax = m.yMax; }
   }
   const yRange = yMax - yMin || 1;
   const toX = t => cX + ((t - tStart) / (windowSec * 1000)) * cW;
   const toY = v => cY + cH - ((v - yMin) / yRange) * cH;
-
-  const GRID  = '#ffffff0a';
-  const AXIS  = '#ffffff18';
-  const LABEL = '#7a8fa3';
-  const FONT  = '10px Poppins, sans-serif';
-
-  ctx.clearRect(0, 0, W, H);
-  ctx.font = FONT;
-
-  // y grid + labels
+  const GRID = '#ffffff0a', AXIS = '#ffffff18', LABEL = '#7a8fa3', FONT = '10px Poppins,sans-serif';
+  ctx.clearRect(0, 0, W, H); ctx.font = FONT;
   for (let i = 0; i <= 5; i++) {
-    const v = yMin + (yRange / 5) * i;
-    const y = toY(v);
-    ctx.strokeStyle = GRID; ctx.lineWidth = 0.5;
+    const v = yMin + (yRange / 5) * i, y = toY(v);
+    ctx.strokeStyle = GRID; ctx.lineWidth = .5;
     ctx.beginPath(); ctx.moveTo(cX, y); ctx.lineTo(cX + cW, y); ctx.stroke();
     ctx.fillStyle = LABEL; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     ctx.fillText(v.toFixed(m.decimals <= 1 ? 1 : 2), cX - 6, y);
   }
-
-  // x labels
   const xN = Math.max(2, Math.min(8, Math.floor(cW / 90)));
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (let i = 0; i <= xN; i++) {
-    const t = tStart + (i / xN) * windowSec * 1000;
-    const x = toX(t);
-    const s = Math.round((now - t) / 1000);
-    ctx.fillStyle = LABEL;
-    ctx.fillText(s === 0 ? 'now' : `-${s}s`, x, cY + cH + 6);
-    ctx.strokeStyle = AXIS; ctx.lineWidth = 0.5;
+    const t = tStart + (i / xN) * windowSec * 1000, x = toX(t), s = Math.round((now - t) / 1000);
+    ctx.fillStyle = LABEL; ctx.fillText(s === 0 ? 'now' : `-${s}s`, x, cY + cH + 6);
+    ctx.strokeStyle = AXIS; ctx.lineWidth = .5;
     ctx.beginPath(); ctx.moveTo(x, cY + cH); ctx.lineTo(x, cY + cH + 3); ctx.stroke();
   }
-
-  // axes
   ctx.strokeStyle = AXIS; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(cX, cY + cH); ctx.lineTo(cX + cW, cY + cH); ctx.stroke();
-
   if (pts.length < 2) {
-    ctx.fillStyle = LABEL; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = '11px Poppins, sans-serif';
-    ctx.fillText('Waiting for data…', cX + cW / 2, cY + cH / 2);
-    return;
+    ctx.fillStyle = LABEL; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '11px Poppins,sans-serif';
+    ctx.fillText('Waiting for data…', cX + cW / 2, cY + cH / 2); return;
   }
-
-  ctx.save();
-  ctx.beginPath(); ctx.rect(cX, cY, cW, cH); ctx.clip();
-
-  // zero line
+  ctx.save(); ctx.beginPath(); ctx.rect(cX, cY, cW, cH); ctx.clip();
   if (yMin < 0 && yMax > 0) {
-    const z = toY(0);
-    ctx.strokeStyle = m.color + '40'; ctx.lineWidth = 1; ctx.setLineDash([4, 5]);
-    ctx.beginPath(); ctx.moveTo(cX, z); ctx.lineTo(cX + cW, z); ctx.stroke();
-    ctx.setLineDash([]);
+    const z = toY(0); ctx.strokeStyle = m.color + '40'; ctx.lineWidth = 1; ctx.setLineDash([4, 5]);
+    ctx.beginPath(); ctx.moveTo(cX, z); ctx.lineTo(cX + cW, z); ctx.stroke(); ctx.setLineDash([]);
   }
-
-  // fill under line
-  ctx.beginPath();
-  ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
+  ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
   pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
-  ctx.lineTo(toX(pts[pts.length - 1].t), cY + cH);
-  ctx.lineTo(toX(pts[0].t), cY + cH);
-  ctx.closePath();
-  ctx.fillStyle = m.color + '14';
-  ctx.fill();
-
-  // line
-  ctx.beginPath();
-  ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
+  ctx.lineTo(toX(pts[pts.length-1].t), cY + cH); ctx.lineTo(toX(pts[0].t), cY + cH);
+  ctx.closePath(); ctx.fillStyle = m.color + '14'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
   pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
-  ctx.strokeStyle = m.color; ctx.lineWidth = 1.5;
-  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  ctx.stroke();
-
-  // latest dot
-  const lp = pts[pts.length - 1];
-  ctx.beginPath(); ctx.arc(toX(lp.t), toY(lp.v), 3.5, 0, Math.PI * 2);
-  ctx.fillStyle = m.color; ctx.fill();
-  ctx.strokeStyle = '#0d1b2a'; ctx.lineWidth = 1.5; ctx.stroke();
-
+  ctx.strokeStyle = m.color; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+  const lp = pts[pts.length-1];
+  ctx.beginPath(); ctx.arc(toX(lp.t), toY(lp.v), 3.5, 0, Math.PI*2);
+  ctx.fillStyle = m.color; ctx.fill(); ctx.strokeStyle = '#0d1b2a'; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.restore();
 }
 
@@ -496,7 +410,335 @@ function loop()      { render(); rafId = requestAnimationFrame(loop); }
 function startLoop() { if (!rafId) rafId = requestAnimationFrame(loop); }
 function stopLoop()  { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
 
-// ─── DATA ──────────────────────────────────────────────────────────────────
+// ─── MAP PANEL ──────────────────────────────────────────────────────────────
+let leafletMap    = null;
+let mapPolylines  = [];   // array of L.polyline segments
+let replayMarker  = null;
+let replayTimer   = null;
+let replayIdx     = 0;
+let isPlaying     = false;
+let colorByField  = 'speed';
+// mapRange: [0..1] start/end fraction of gpsHistory shown
+let mapRangeStart = 0;
+let mapRangeEnd   = 1;
+let mapFitted     = false;  // only fitBounds on first draw
+
+function clearMapPanel() {
+  stopReplay();
+  if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+  mapPolylines = []; replayMarker = null; mapFitted = false;
+}
+
+function activateMap() {
+  stopLoop();
+  clearMapPanel();
+  activeField = null;
+
+  document.querySelectorAll('.metric-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('card-map').classList.add('active');
+
+  const area = document.getElementById('mainArea');
+  area.innerHTML = '';
+  const panel = document.createElement('div');
+  panel.className = 'map-panel';
+  area.appendChild(panel);
+
+  // build metric options
+  const metricOpts = METRICS.map(m =>
+    `<option value="${m.field}" ${m.field === colorByField ? 'selected' : ''}>${m.label}</option>`
+  ).join('');
+
+  panel.innerHTML = `
+    <div class="map-toolbar">
+      <span class="plot-name">GPS Track</span>
+
+      <div class="color-by">
+        <span class="color-by-label">Color by</span>
+        <select id="colorBySelect" onchange="setColorBy(this.value)">${metricOpts}</select>
+      </div>
+
+      <div class="map-legend">
+        <span class="legend-lo" id="legendLo">low</span>
+        <div class="legend-grad" id="legendGrad"></div>
+        <span class="legend-hi" id="legendHi">high</span>
+      </div>
+
+      <div class="scrubber-wrap">
+        <span class="scrubber-label">Start</span>
+        <input type="time" id="timeStart" step="1" oninput="onTimeInput('start')" style="background:var(--navy3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:10px;padding:2px 6px;outline:none;width:88px;">
+        <input type="range" id="scrubStart" min="0" max="1000" value="0" step="1"
+          oninput="onScrub('start')">
+        <span class="scrubber-label">End</span>
+        <input type="time" id="timeEnd" step="1" oninput="onTimeInput('end')" style="background:var(--navy3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:10px;padding:2px 6px;outline:none;width:88px;">
+        <input type="range" id="scrubEnd" min="0" max="1000" value="1000" step="1"
+          oninput="onScrub('end')">
+      </div>
+
+      <button class="replay-btn" id="replayBtn" onclick="toggleReplay()">▶ Replay</button>
+
+      <div class="speed-wrap">
+        <span class="speed-label">Speed</span>
+        <select class="speed-select" id="replaySpeed">
+          <option value="1">1×</option>
+          <option value="5">5×</option>
+          <option value="10" selected>10×</option>
+          <option value="30">30×</option>
+        </select>
+      </div>
+    </div>
+    <div class="map-wrap"><div id="leafletMap"></div></div>
+  `;
+
+  // init Leaflet
+  leafletMap = L.map('leafletMap', { zoomControl:true, attributionControl:true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© OpenStreetMap contributors',
+    maxZoom:19,
+  }).addTo(leafletMap);
+
+  // navy tint: injected between tile pane (z:200) and SVG overlay pane (z:400)
+  // so tiles are dimmed but the coloured path polylines remain fully visible
+  const tintPane = leafletMap.createPane('tintPane');
+  tintPane.style.zIndex = 250;
+  tintPane.style.pointerEvents = 'none';
+  tintPane.innerHTML = '<div style="position:absolute;inset:0;background:rgba(13,27,42,0.50)"></div>';
+
+
+  drawMapTrace();
+  syncTimeInputs();
+
+}
+
+// ─── MAP DRAWING ─────────────────────────────────────────────────────────────
+
+// color ramp: green → gold → red
+function metricToColor(norm) {
+  // 0→green, 0.5→gold, 1→red
+  const r = norm < .5
+    ? Math.round(76  + (201-76)  * norm * 2)
+    : Math.round(201 + (224-201) * (norm-.5) * 2);
+  const g = norm < .5
+    ? Math.round(175 + (168-175) * norm * 2)
+    : Math.round(168 + (92-168)  * (norm-.5) * 2);
+  const b = norm < .5
+    ? Math.round(61  + (76-61)   * norm * 2)
+    : Math.round(76  + (74-76)   * (norm-.5) * 2);
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawMapTrace() {
+  if (!leafletMap) return;
+
+  // clear old layers
+  mapPolylines.forEach(p => p.remove());
+  mapPolylines = [];
+  if (replayMarker) { replayMarker.remove(); replayMarker = null; }
+
+  const n = gpsHistory.length;
+  if (n < 2) {
+    // show world view, wait for data
+    leafletMap.setView([49.2827, -123.1207], 13);
+    return;
+  }
+
+  // slice by range
+  const iStart = Math.floor(mapRangeStart * (n - 1));
+  const iEnd   = Math.ceil(mapRangeEnd   * (n - 1));
+  const pts    = gpsHistory.slice(iStart, iEnd + 1);
+
+  if (pts.length < 2) return;
+
+  // get coloring metric values for this slice
+  const mDef = METRICS.find(x => x.field === colorByField);
+  const mHist = history[colorByField];
+
+  // build per-segment polylines
+  // each segment = pts[i] → pts[i+1], colored by metric value at pts[i].t
+  let allVals = [];
+  pts.forEach(p => {
+    const nearest = nearestMetric(mHist, p.t);
+    if (nearest !== null) allVals.push(nearest);
+  });
+  const vMin = allVals.length ? Math.min(...allVals) : 0;
+  const vMax = allVals.length ? Math.max(...allVals) : 1;
+  const vRange = vMax - vMin || 1;
+
+  // update legend
+  const legendLo = document.getElementById('legendLo');
+  const legendHi = document.getElementById('legendHi');
+  if (legendLo) legendLo.textContent = vMin.toFixed(mDef ? mDef.decimals : 1) + (mDef ? ' ' + mDef.unit : '');
+  if (legendHi) legendHi.textContent = vMax.toFixed(mDef ? mDef.decimals : 1) + (mDef ? ' ' + mDef.unit : '');
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    const v    = nearestMetric(mHist, pts[i].t);
+    const norm = v !== null ? (v - vMin) / vRange : 0.5;
+    const col  = metricToColor(norm);
+    const seg  = L.polyline(
+      [[pts[i].lat, pts[i].lon], [pts[i+1].lat, pts[i+1].lon]],
+      { color: col, weight: 4, opacity: 0.9, lineJoin:'round', lineCap:'round' }
+    ).addTo(leafletMap);
+    mapPolylines.push(seg);
+  }
+
+  // fit map to trace only on first draw; subsequent scrubs keep current view
+  if (!mapFitted) {
+    const bounds = L.latLngBounds(pts.map(p => [p.lat, p.lon]));
+    leafletMap.fitBounds(bounds, { padding:[24,24] });
+    mapFitted = true;
+  }
+
+  // start marker
+  updateScrubInfo(iStart, iEnd, n);
+}
+
+function nearestMetric(hist, t) {
+  if (!hist || !hist.length) return null;
+  let lo = 0, hi = hist.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (hist[mid].t < t) lo = mid + 1; else hi = mid;
+  }
+  return hist[lo] ? hist[lo].v : null;
+}
+
+function setColorBy(field) {
+  colorByField = field;
+  drawMapTrace();
+}
+
+// fmt: timestamp → "HH:MM:SS" for <input type="time">
+function tsToTimeStr(t) {
+  const d = new Date(t);
+  return d.getHours().toString().padStart(2,'0') + ':' +
+         d.getMinutes().toString().padStart(2,'0') + ':' +
+         d.getSeconds().toString().padStart(2,'0');
+}
+
+// parse "HH:MM:SS" back to today's timestamp
+function timeStrToTs(str, refDate) {
+  const [h,m,s] = str.split(':').map(Number);
+  const d = new Date(refDate);
+  d.setHours(h, m, s, 0);
+  return d.getTime();
+}
+
+function onScrub(which) {
+  const sEl = document.getElementById('scrubStart');
+  const eEl = document.getElementById('scrubEnd');
+  let s = parseInt(sEl.value), e = parseInt(eEl.value);
+  if (s > e) {
+    if (which === 'start') sEl.value = e, s = e;
+    else                   eEl.value = s, e = s;
+  }
+  mapRangeStart = s / 1000;
+  mapRangeEnd   = e / 1000;
+  syncTimeInputs();
+  stopReplay();
+  drawMapTrace();
+}
+
+function onTimeInput(which) {
+  const n = gpsHistory.length;
+  if (n < 2) return;
+  const tFirst = gpsHistory[0].t, tLast = gpsHistory[n-1].t;
+  const ref = new Date(tFirst);
+
+  const tsStart = timeStrToTs(document.getElementById('timeStart').value, ref);
+  const tsEnd   = timeStrToTs(document.getElementById('timeEnd').value,   ref);
+
+  // clamp to data range
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  let fracS = (clamp(tsStart, tFirst, tLast) - tFirst) / (tLast - tFirst);
+  let fracE = (clamp(tsEnd,   tFirst, tLast) - tFirst) / (tLast - tFirst);
+  if (which === 'start' && fracS > fracE) fracS = fracE;
+  if (which === 'end'   && fracE < fracS) fracE = fracS;
+
+  mapRangeStart = fracS;
+  mapRangeEnd   = fracE;
+
+  document.getElementById('scrubStart').value = Math.round(fracS * 1000);
+  document.getElementById('scrubEnd').value   = Math.round(fracE * 1000);
+
+  stopReplay();
+  drawMapTrace();
+}
+
+function syncTimeInputs() {
+  const n = gpsHistory.length;
+  if (n < 2) return;
+  const tFirst = gpsHistory[0].t, tLast = gpsHistory[n-1].t;
+  const tS = tFirst + mapRangeStart * (tLast - tFirst);
+  const tE = tFirst + mapRangeEnd   * (tLast - tFirst);
+  const tsEl = document.getElementById('timeStart');
+  const teEl = document.getElementById('timeEnd');
+  if (tsEl) tsEl.value = tsToTimeStr(tS);
+  if (teEl) teEl.value = tsToTimeStr(tE);
+}
+
+function updateScrubInfo(iStart, iEnd, n) {
+  if (n < 2) return;
+  syncTimeInputs();
+}
+
+// ─── REPLAY ──────────────────────────────────────────────────────────────────
+function toggleReplay() {
+  if (isPlaying) stopReplay();
+  else startReplay();
+}
+
+function startReplay() {
+  if (!leafletMap || gpsHistory.length < 2) return;
+  isPlaying = true;
+  const btn = document.getElementById('replayBtn');
+  if (btn) btn.classList.add('playing'), btn.textContent = '⏸ Pause';
+
+  const n      = gpsHistory.length;
+  const iStart = Math.floor(mapRangeStart * (n - 1));
+  const iEnd   = Math.ceil(mapRangeEnd   * (n - 1));
+  const pts    = gpsHistory.slice(iStart, iEnd + 1);
+  if (pts.length < 2) { stopReplay(); return; }
+
+  replayIdx = 0;
+
+  // car marker
+  if (replayMarker) replayMarker.remove();
+  const carIcon = L.divIcon({
+    className: '',
+    html: `<div style="
+      width:12px;height:12px;border-radius:50%;
+      background:#c9a84c;border:2px solid #fff;
+      box-shadow:0 0 6px #c9a84c88;
+    "></div>`,
+    iconSize: [12, 12], iconAnchor: [6, 6],
+  });
+  replayMarker = L.marker([pts[0].lat, pts[0].lon], { icon:carIcon, zIndexOffset:1000 }).addTo(leafletMap);
+
+  function step() {
+    if (!isPlaying) return;
+    replayIdx++;
+    if (replayIdx >= pts.length) { stopReplay(); return; }
+    replayMarker.setLatLng([pts[replayIdx].lat, pts[replayIdx].lon]);
+
+    // interval based on actual time delta, divided by speed multiplier
+    const speedMul = parseFloat(document.getElementById('replaySpeed')?.value || 10);
+    const dtReal   = replayIdx < pts.length - 1
+      ? pts[replayIdx + 1].t - pts[replayIdx].t
+      : 500;
+    const dtFast   = Math.max(16, dtReal / speedMul);
+    replayTimer = setTimeout(step, dtFast);
+  }
+
+  replayTimer = setTimeout(step, 100);
+}
+
+function stopReplay() {
+  isPlaying = false;
+  clearTimeout(replayTimer); replayTimer = null;
+  const btn = document.getElementById('replayBtn');
+  if (btn) btn.classList.remove('playing'), btn.textContent = '▶ Replay';
+}
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
 function push(field, t, raw) {
   const m = METRICS.find(x => x.field === field);
   if (!m) return;
@@ -506,57 +748,189 @@ function push(field, t, raw) {
   const cut = Date.now() - MAX_MS;
   while (h.length && h[0].t < cut) h.shift();
 
-  const L = latest[field];
-  L.prev  = L.value;
-  L.value = v;
+  const lat_ = latest[field];
+  lat_.prev = lat_.value; lat_.value = v;
 
-  // plain text swap — no animation class
   const valEl = document.getElementById('mcv-' + field);
-  if (valEl) {
-    valEl.classList.remove('no-data');
-    valEl.textContent = v.toFixed(m.decimals);
-  }
+  if (valEl) { valEl.classList.remove('no-data'); valEl.textContent = v.toFixed(m.decimals); }
 
-  // bar — CSS transition handles smooth movement
   const barEl = document.getElementById('mcb-' + field);
   if (barEl) {
     const pct = ((v - m.yMin) / (m.yMax - m.yMin)) * 100;
     barEl.style.width = Math.min(100, Math.max(0, pct)).toFixed(1) + '%';
   }
 
-  // delta
   const dEl = document.getElementById('mcd-' + field);
-  if (dEl && L.prev !== null) {
-    const diff = v - L.prev;
-    const sign = diff > 0 ? '▲ +' : diff < 0 ? '▼ ' : '';
-    const cls  = diff > 0 ? 'delta-up' : diff < 0 ? 'delta-dn' : '';
-    dEl.className = 'mc-delta ' + cls;
-    dEl.textContent = sign + Math.abs(diff).toFixed(m.decimals) + ' ' + m.unit;
+  if (dEl && lat_.prev !== null) {
+    const diff = v - lat_.prev;
+    dEl.className = 'mc-delta ' + (diff > 0 ? 'delta-up' : diff < 0 ? 'delta-dn' : '');
+    dEl.textContent = (diff > 0 ? '▲ +' : diff < 0 ? '▼ ' : '') + Math.abs(diff).toFixed(m.decimals) + ' ' + m.unit;
+  }
+}
+
+function pushGPS(t, lat, lon) {
+  gpsHistory.push({ t, lat, lon });
+  const cut = Date.now() - MAX_MS;
+  while (gpsHistory.length && gpsHistory[0].t < cut) gpsHistory.shift();
+
+  // update map card
+  const gEl = document.getElementById('mcv-gps');
+  if (gEl) { gEl.classList.remove('no-data'); gEl.textContent = gpsHistory.length + ' pts'; }
+  const bEl = document.getElementById('mcb-gps');
+  if (bEl) bEl.style.width = Math.min(100, gpsHistory.length / 10) + '%';
+
+  // if map panel is active, incrementally add the new segment
+  if (leafletMap && gpsHistory.length >= 2 && !isPlaying) {
+    const n  = gpsHistory.length;
+    const i  = n - 2; // second-to-last
+    const iS = Math.floor(mapRangeStart * (n - 1));
+    const iE = Math.ceil(mapRangeEnd   * (n - 1));
+    if (i >= iS && i < iE) {
+      // only redraw periodically to avoid per-frame full redraw
+      if (n % 5 === 0) drawMapTrace();
+    }
   }
 }
 
 function ingest(data) {
   const now = Date.now();
   METRICS.forEach(m => { if (data[m.field] !== undefined) push(m.field, now, data[m.field]); });
+  // GPS
+  if (data.lat !== undefined && data.lon !== undefined) {
+    pushGPS(data.timestamp || now, data.lat, data.lon);
+  }
 }
 
-// ─── DUMMY DATA (auto-starts) ───────────────────────────────────────────────
+// ─── DUMMY DATA ──────────────────────────────────────────────────────────────
+// Real GPS trace (coords are [lat, lon])
+const WAYPOINTS = [
+    [ 37.0011529 , -86.36837867],[ 37.00122817, -86.3682181 ],[ 37.00133071, -86.36801267],
+    [ 37.00143614, -86.36779264],[ 37.00152389, -86.3675912 ],[ 37.00160574, -86.36740819],
+    [ 37.00167596, -86.36725066],[ 37.00175285, -86.36709064],[ 37.00183166, -86.36691875],
+    [ 37.00192538, -86.36670617],[ 37.00200136, -86.36653034],[ 37.00208623, -86.36635086],
+    [ 37.00215644, -86.36619701],[ 37.00222549, -86.36603626],[ 37.00229839, -86.3658645 ],
+    [ 37.00237732, -86.36569622],[ 37.00245038, -86.36553914],[ 37.00252912, -86.36537128],
+    [ 37.00259904, -86.36521818],[ 37.00266755, -86.36507091],[ 37.00274639, -86.36490341],
+    [ 37.00283342, -86.36471029],[ 37.00291248, -86.36454704],[ 37.00298517, -86.36439075],
+    [ 37.0030636 , -86.36423803],[ 37.00313338, -86.36408574],[ 37.00320937, -86.36393701],
+    [ 37.00330797, -86.36377724],[ 37.00343811, -86.36368662],[ 37.00357758, -86.36365019],
+    [ 37.00372489, -86.36360692],[ 37.00388711, -86.36356354],[ 37.00405472, -86.36352621],
+    [ 37.00423763, -86.36348621],[ 37.00437129, -86.36338074],[ 37.00448184, -86.36323899],
+    [ 37.00457515, -86.36307953],[ 37.0047012 , -86.36286956],[ 37.00486024, -86.36273924],
+    [ 37.00505061, -86.36270756],[ 37.00527945, -86.36272947],[ 37.00548802, -86.36263566],
+    [ 37.00565341, -86.36245496],[ 37.00573513, -86.3621647 ],[ 37.00568611, -86.36182869],
+    [ 37.00548782, -86.36157939],[ 37.0052881 , -86.36149696],[ 37.00511652, -86.36149669],
+    [ 37.0049746 , -86.36158761],[ 37.00485989, -86.3616726 ],[ 37.00469955, -86.3617696 ],
+    [ 37.00451492, -86.36178471],[ 37.00435852, -86.36173599],[ 37.00419576, -86.36162316],
+    [ 37.00409127, -86.36146652],[ 37.00404463, -86.3612301 ],[ 37.00407232, -86.36097832],
+    [ 37.00415922, -86.36078578],[ 37.00426711, -86.36066944],[ 37.00439509, -86.36060407],
+    [ 37.00452844, -86.36057503],[ 37.00466778, -86.36054604],[ 37.004833  , -86.36050987],
+    [ 37.00499495, -86.36047743],[ 37.00514229, -86.36044484],[ 37.00524902, -86.36041601],
+    [ 37.00541074, -86.36037856],[ 37.00558676, -86.36034575],[ 37.00578957, -86.36038183],
+    [ 37.00596102, -86.36045445],[ 37.00607154, -86.36065091],[ 37.0061651 , -86.36090615],
+    [ 37.00626234, -86.3611639 ],[ 37.00637312, -86.36147776],[ 37.00642557, -86.36179897],
+    [ 37.00644459, -86.36216748],[ 37.00637929, -86.36250433],[ 37.00629836, -86.36273906],
+    [ 37.00622229, -86.36291634],[ 37.00611158, -86.36309997],[ 37.00600738, -86.36323379],
+    [ 37.00589169, -86.3633461 ],[ 37.00576471, -86.36344689],[ 37.00564905, -86.36353398],
+    [ 37.00551878, -86.36359932],[ 37.00537978, -86.36365448],[ 37.00525188, -86.36370605],
+    [ 37.0051236 , -86.36376501],[ 37.00497727, -86.36382802],[ 37.00484855, -86.36391978],
+    [ 37.00471266, -86.36403361],[ 37.0045783 , -86.36422396],[ 37.00447907, -86.36439954],
+    [ 37.00435695, -86.36453807],[ 37.00424813, -86.36465022],[ 37.00411061, -86.36480228],
+    [ 37.00397977, -86.36492984],[ 37.0038682 , -86.36504946],[ 37.00376295, -86.36516126],
+    [ 37.00365436, -86.36527329],[ 37.00354759, -86.36539144],[ 37.00341675, -86.36552332],
+    [ 37.00329206, -86.3656715 ],[ 37.00316095, -86.36581567],[ 37.00303256, -86.36594441],
+    [ 37.00291203, -86.36607157],[ 37.00278014, -86.36622802],[ 37.00269333, -86.36641303],
+    [ 37.00260606, -86.36659437],[ 37.00252845, -86.36675984],[ 37.00243487, -86.36695271],
+    [ 37.00234795, -86.36716654],[ 37.00226102, -86.36735999],[ 37.00218046, -86.36754144],
+    [ 37.00210026, -86.36771854],[ 37.00202358, -86.36787901],[ 37.00194406, -86.36806693],
+    [ 37.00185835, -86.36825428],[ 37.00177578, -86.36843604],[ 37.00169902, -86.36860048],
+    [ 37.0016732 , -86.3687928 ],[ 37.001679  , -86.3689974 ],[ 37.00168488, -86.36919051],
+    [ 37.00169122, -86.36938766],[ 37.00169469, -86.3695562 ],[ 37.00170118, -86.36974238],
+    [ 37.00171055, -86.36993991],[ 37.00167198, -86.37010864],[ 37.00158558, -86.37021273],
+    [ 37.00148934, -86.37030898],[ 37.00139295, -86.37041757],[ 37.00129011, -86.37051816],
+    [ 37.00120286, -86.37061913],[ 37.00112253, -86.37073184],[ 37.00106144, -86.37085264],
+    [ 37.00099678, -86.37100197],[ 37.00092255, -86.37116696],[ 37.00083249, -86.37137665],
+    [ 37.00073506, -86.37159438],[ 37.00065426, -86.37177611],[ 37.00057398, -86.37196168],
+    [ 37.00060097, -86.37214635],[ 37.00074272, -86.37221467],[ 37.0009059 , -86.37222018],
+    [ 37.00107657, -86.37218846],[ 37.00122503, -86.37211976],[ 37.00133803, -86.37204677],
+    [ 37.00145467, -86.37192099],[ 37.00156457, -86.37178347],[ 37.00167114, -86.37162599],
+    [ 37.00176434, -86.37145299],[ 37.00183833, -86.37126821],[ 37.00188646, -86.37112396],
+    [ 37.0019441 , -86.37095574],[ 37.00197296, -86.370787  ],[ 37.00202945, -86.37067751],
+    [ 37.00209668, -86.37048098],[ 37.00218305, -86.37031655],[ 37.00228558, -86.37016005],
+    [ 37.00238818, -86.37002764],[ 37.00249377, -86.36991909],[ 37.00259639, -86.36983868],
+    [ 37.00270864, -86.36976266],[ 37.00281411, -86.3697033 ],[ 37.00292264, -86.36964769],
+    [ 37.00303847, -86.369599  ],[ 37.00316942, -86.36952703],[ 37.00332578, -86.36939126],
+    [ 37.00342743, -86.36921198],[ 37.00346211, -86.36901195],[ 37.00343231, -86.36879509],
+    [ 37.00336736, -86.36861758],[ 37.00327983, -86.36847602],[ 37.00316589, -86.36828932],
+    [ 37.00305696, -86.36810259],[ 37.00296937, -86.36793662],[ 37.00293802, -86.36773416],
+    [ 37.00295792, -86.36753614],[ 37.00301643, -86.36739089],[ 37.00307192, -86.36724611],
+    [ 37.00312788, -86.36711056],[ 37.00320856, -86.36698638],[ 37.00331523, -86.36684361],
+    [ 37.00340519, -86.36672019],[ 37.00350264, -86.36658791],[ 37.00361135, -86.36649982],
+    [ 37.00374245, -86.36645177],[ 37.00387034, -86.3664758 ],[ 37.00395668, -86.36655587],
+    [ 37.00402368, -86.36670753],[ 37.00407807, -86.36686779],[ 37.00412607, -86.36701603],
+    [ 37.00418686, -86.36718831],[ 37.00427315, -86.36742386],[ 37.00436296, -86.3676927 ],
+    [ 37.00442144, -86.36790543],[ 37.00445858, -86.36815496],[ 37.00447715, -86.36847342],
+    [ 37.00444541, -86.36882644],[ 37.00434238, -86.36911386],[ 37.00425654, -86.36927291],
+    [ 37.00418289, -86.36939303],[ 37.00410293, -86.36950912],[ 37.00399731, -86.36962489],
+    [ 37.00390147, -86.36973254],[ 37.00379293, -86.36984054],[ 37.00369701, -86.36994104],
+    [ 37.00359474, -86.37004514],[ 37.0034838 , -86.3701598 ],[ 37.00338477, -86.37024376],
+    [ 37.00327609, -86.37032788],[ 37.00318982, -86.37040789],[ 37.00306205, -86.37049992],
+    [ 37.00294389, -86.37059192],[ 37.00283177, -86.37070006],[ 37.00272312, -86.37083897],
+    [ 37.00264003, -86.37094293],[ 37.00255683, -86.37103895],[ 37.00249914, -86.37115127],
+    [ 37.00243497, -86.37126771],[ 37.00236746, -86.3713964 ],[ 37.00230001, -86.37152106],
+    [ 37.00223561, -86.37164596],[ 37.00217132, -86.37175865],[ 37.0021135 , -86.37187932],
+    [ 37.00204601, -86.37200003],[ 37.00196791, -86.37211434],[ 37.00188761, -86.3722312 ],
+    [ 37.00180726, -86.37233202],[ 37.00173651, -86.37241676],[ 37.00165284, -86.37250555],
+    [ 37.00155067, -86.3726109 ],[ 37.00144762, -86.37271211],[ 37.00136704, -86.37279282],
+    [ 37.00126713, -86.37288565],[ 37.00115123, -86.37299929],[ 37.00103518, -86.37310829],
+    [ 37.0009191 , -86.37321738],[ 37.00082561, -86.37329809],[ 37.00072863, -86.37339546],
+    [ 37.00061364, -86.37350099],[ 37.00051698, -86.37360214],[ 37.00042667, -86.37368311],
+    [ 37.00032338, -86.37378434],[ 37.00022342, -86.37387665],[ 37.00012018, -86.3739737 ],
+    [ 37.00002051, -86.37405916],[ 36.99991404, -86.37415222],[ 36.99981076, -86.37423248],
+    [ 36.99970432, -86.37430523],[ 36.99958169, -86.37432571],[ 36.99946928, -86.37430399],
+    [ 36.99934964, -86.37428072],[ 36.99922365, -86.37425686],[ 36.99908793, -86.37422888],
+    [ 36.99899069, -86.37413638],[ 36.99896465, -86.37397888],[ 36.9989808 , -86.37380904],
+    [ 36.99900664, -86.37362303],[ 36.99904589, -86.37342887],[ 36.9990885 , -86.37323096],
+    [ 36.99912743, -86.3730292 ],[ 36.99916641, -86.37284378],[ 36.99921127, -86.37261758],
+    [ 36.99924349, -86.37245211],[ 36.99932082, -86.37230251],[ 36.99940337, -86.37214797],
+    [ 36.99948814, -86.37199725],[ 36.99958754, -86.37189043],[ 36.99970528, -86.37178738],
+    [ 36.99982625, -86.37169183],[ 36.99997073, -86.37159181],[ 37.00011471, -86.3714889 ],
+    [ 37.00027357, -86.37138907],[ 37.0003852 , -86.37123775],[ 37.00042033, -86.37099884],
+    [ 37.00038811, -86.3707825 ],[ 37.00031195, -86.37062837],[ 37.00026491, -86.37041498],
+    [ 37.00030254, -86.37020247],[ 37.00038472, -86.3700261 ],[ 37.0004699 , -86.36984594],
+    [ 37.00056383, -86.36964375],[ 37.00064015, -86.3694857 ],[ 37.00070993, -86.36934481],
+    [ 37.0008098 , -86.36912411],[ 37.00090662, -86.36891836],[ 37.00098578, -86.36874579],
+    [ 37.00107373, -86.36854755]
+];
+
+let wpIdx = 0;
 const ds = { motor_power:2800, array_power:1600, battery_soc:84, speed:58, steering_angle:0, acceleration:0.1 };
 
 function dummyTick() {
   const w = (v, s, lo, hi) => Math.min(hi, Math.max(lo, v + (Math.random() - .5) * s));
   ds.motor_power    = w(ds.motor_power,    200,  0,    5000);
   ds.array_power    = w(ds.array_power,    100,  0,    3000);
-  ds.battery_soc    = w(ds.battery_soc,    0.05, 0,    100);
+  ds.battery_soc    = w(ds.battery_soc,    .05,  0,    100);
   ds.speed          = w(ds.speed,          3,    0,    100);
   ds.steering_angle = w(ds.steering_angle, 3,   -40,   40);
-  ds.acceleration   = w(ds.acceleration,   0.08, -0.8,  0.8);
-  ingest(ds);
+  ds.acceleration   = w(ds.acceleration,   .08, -.8,    .8);
+
+  const pt = WAYPOINTS[wpIdx % WAYPOINTS.length];
+  wpIdx++;
+
+  const now = Date.now();
+  pushGPS(now, pt[0], pt[1]);
+  push('speed',          now, ds.speed);
+  push('motor_power',    now, ds.motor_power);
+  push('array_power',    now, ds.array_power);
+  push('battery_soc',    now, ds.battery_soc);
+  push('steering_angle', now, ds.steering_angle);
+  push('acceleration',   now, ds.acceleration);
 }
 
 setInterval(dummyTick, 500);
+window.addEventListener('resize', () => { if (activeField) render(); if (leafletMap) leafletMap.invalidateSize(); });
 
-window.addEventListener('resize', render);
 </script>
 </body>
 </html>
