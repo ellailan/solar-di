@@ -270,7 +270,7 @@ input[type=time]:focus { border-color:var(--gold); }
 .map-legend { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .legend-grad {
   width:80px; height:6px; border-radius:3px;
-  background:linear-gradient(to right, hsl(180,100%,62%), hsl(120,100%,62%), hsl(60,100%,62%), hsl(0,100%,62%));
+  background:linear-gradient(to right,#4caf7d,#c9a84c,#e05c4a);
 }
 .legend-lo, .legend-hi { font-size:11px; color:var(--muted); }
 
@@ -632,11 +632,18 @@ function activateMap() {
 
 // ─── MAP DRAWING ─────────────────────────────────────────────────────────────
 
-// color ramp: vivid cyan → green → yellow → orange → red
+// color ramp: green → gold → red (original palette)
 function metricToColor(norm) {
-  // hue sweeps 180° (cyan) → 120° (green) → 60° (yellow) → 0° (red)
-  const hue = Math.round(180 - norm * 180);
-  return `hsl(${hue}, 100%, 62%)`;
+  const r = norm < .5
+    ? Math.round(76  + (201-76)  * norm * 2)
+    : Math.round(201 + (224-201) * (norm-.5) * 2);
+  const g = norm < .5
+    ? Math.round(175 + (168-175) * norm * 2)
+    : Math.round(168 + (92-168)  * (norm-.5) * 2);
+  const b = norm < .5
+    ? Math.round(61  + (76-61)   * norm * 2)
+    : Math.round(76  + (74-76)   * (norm-.5) * 2);
+  return `rgb(${r},${g},${b})`;
 }
 
 function drawMapTrace() {
@@ -682,17 +689,43 @@ function drawMapTrace() {
   if (legendLo) legendLo.textContent = vMin.toFixed(mDef ? mDef.decimals : 1) + (mDef ? ' ' + mDef.unit : '');
   if (legendHi) legendHi.textContent = vMax.toFixed(mDef ? mDef.decimals : 1) + (mDef ? ' ' + mDef.unit : '');
 
+  // Group consecutive points into runs of similar color (32 buckets),
+  // then draw each run as a single smoothed polyline.
+  const BUCKETS = 32;
+  let runLatLngs = [[pts[0].lat, pts[0].lon]];
+  let runBucket  = -1;
+
+  const flushRun = (col) => {
+    if (runLatLngs.length < 2) return;
+    mapPolylines.push(
+      L.polyline(runLatLngs, { color: col, weight: 4, opacity: 0.95,
+        smoothFactor: 1.5, lineJoin:'round', lineCap:'round' })
+       .addTo(leafletMap)
+    );
+  };
+
+  let prevCol = null;
   for (let i = 0; i < pts.length - 1; i++) {
-    const v    = nearestMetric(mHist, pts[i].t);
-    const norm = v !== null ? (v - vMin) / vRange : 0.5;
-    const col  = metricToColor(norm);
-    const latLngs = [[pts[i].lat, pts[i].lon], [pts[i+1].lat, pts[i+1].lon]];
-    // main stroke
-    const seg = L.polyline(latLngs,
-      { color: col, weight: 4.5, opacity: 1, lineJoin:'round', lineCap:'round' }
-    ).addTo(leafletMap);
-    mapPolylines.push(seg);
+    const v      = nearestMetric(mHist, pts[i].t);
+    const norm   = v !== null ? (v - vMin) / vRange : 0.5;
+    const bucket = Math.round(norm * (BUCKETS - 1));
+    const col    = metricToColor(norm);
+
+    if (bucket !== runBucket) {
+      flushRun(prevCol || col);
+      // start new run, overlapping one point for continuity
+      runLatLngs = runLatLngs.length > 0
+        ? [runLatLngs[runLatLngs.length - 1], [pts[i].lat, pts[i].lon]]
+        : [[pts[i].lat, pts[i].lon]];
+      runBucket = bucket;
+    } else {
+      runLatLngs.push([pts[i].lat, pts[i].lon]);
+    }
+    prevCol = col;
   }
+  // push last point and flush
+  if (pts.length > 1) runLatLngs.push([pts[pts.length-1].lat, pts[pts.length-1].lon]);
+  flushRun(prevCol || metricToColor(0.5));
 
   // fit map to trace only on first draw; subsequent scrubs keep current view
   if (!mapFitted) {
