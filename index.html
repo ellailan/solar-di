@@ -28,20 +28,45 @@
 
 html, body { height:100%; background:var(--navy); color:var(--text); font-family:var(--font); font-size:14px; overflow:hidden; }
 
-.shell { display:grid; grid-template-rows:52px auto 1fr; height:100vh; }
+.shell { display:grid; grid-template-rows:36px auto 1fr; height:100vh; }
 #mainArea { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
 #mainArea > .plot-panel, #mainArea > .map-panel { flex:1; min-height:0; }
 
 /* ── HEADER ── */
-header { display:flex; align-items:center; gap:12px; padding:0 20px; background:var(--navy2); border-bottom:1px solid var(--border); }
-.logo { font-size:17px; font-weight:700; color:var(--gold); white-space:nowrap; letter-spacing:.01em; }
+header { display:flex; align-items:center; gap:12px; padding:0 20px; height:36px; background:var(--navy2); border-bottom:1px solid var(--border); }
+.logo { font-size:14px; font-weight:700; color:var(--gold); white-space:nowrap; letter-spacing:.01em; }
 .logo span { color:var(--text); font-weight:500; }
 
 /* ── CARD STRIP ── */
+.card-strip-wrapper {
+  flex-shrink:0; background:var(--navy2);
+  border-bottom:1px solid var(--border);
+}
+.card-strip-header {
+  display:flex; align-items:center; justify-content:center;
+  background:var(--navy2);
+  border-top:1px solid var(--border);
+  padding:2px 0;
+}
+.card-strip-toggle {
+  display:flex; align-items:center; gap:5px;
+  background:transparent; border:none;
+  color:var(--muted); font-family:var(--font); font-size:11px; font-weight:600;
+  padding:3px 12px; cursor:pointer; user-select:none;
+  transition:color .15s;
+  letter-spacing:.03em;
+}
+.card-strip-toggle:hover { color:var(--gold); }
+.card-strip-toggle svg { transition:transform .25s ease; flex-shrink:0; }
+.card-strip-wrapper.collapsed .card-strip-toggle svg { transform:rotate(180deg); }
 .card-strip {
   display:flex; flex-wrap:wrap;
-  border-bottom:1px solid var(--border); background:var(--navy2);
-  flex-shrink:0;
+  overflow:hidden;
+  transition:max-height .3s cubic-bezier(.4,0,.2,1), opacity .25s ease;
+  max-height:200px; opacity:1;
+}
+.card-strip-wrapper.collapsed .card-strip {
+  max-height:0; opacity:0;
 }
 
 .metric-card {
@@ -332,7 +357,17 @@ input[type=time]:focus { border-color:var(--gold); }
     <div class="logo">UBC <span>Solar</span></div>
   </header>
 
-  <div class="card-strip" id="cardStrip"></div>
+  <div class="card-strip-wrapper" id="cardStripWrapper">
+    <div class="card-strip" id="cardStrip"></div>
+    <div class="card-strip-header">
+      <button class="card-strip-toggle" id="cardStripToggle" onclick="toggleCardStrip()">
+        <span id="cardStripToggleLabel">Hide Metrics</span>
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="2 8 6 4 10 8"/>
+        </svg>
+      </button>
+    </div>
+  </div>
 
   <div id="mainArea">
     <div class="plot-panel" id="plotPanel">
@@ -1213,6 +1248,16 @@ function dummyTick() {
   push('battery_soc',    now, ds.battery_soc);
   push('steering_angle', now, ds.steering_angle);
   push('acceleration',   now, ds.acceleration);
+}
+
+// ─── CARD STRIP COLLAPSE ─────────────────────────────────────────────────────
+function toggleCardStrip() {
+  const wrapper = document.getElementById('cardStripWrapper');
+  const label   = document.getElementById('cardStripToggleLabel');
+  const collapsed = wrapper.classList.toggle('collapsed');
+  label.textContent = collapsed ? 'Show Metrics' : 'Hide Metrics';
+  // allow map to resize after animation
+  setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 320);
 }
 
 setInterval(dummyTick, 500);
