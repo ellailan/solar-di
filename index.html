@@ -272,6 +272,30 @@ header { display:flex; align-items:center; gap:12px; padding:0 20px; height:36px
   transition:color .15s, border-color .15s, background .15s;
 }
 .ts-apply:hover { color:var(--gold); border-color:var(--gold-dim); background:var(--gold-bg); }
+
+/* ── CUSTOM DATETIME PICKER ── */
+.dt-picker {
+  display:inline-flex; align-items:center;
+  background:var(--navy3); border:1px solid var(--border2); border-radius:5px;
+  padding:0 4px; gap:0; transition:border-color .15s; flex-shrink:0;
+}
+.dt-picker:focus-within { border-color:var(--gold); }
+.dt-seg {
+  font-family:var(--font); font-size:13px; font-weight:500; color:var(--text);
+  background:transparent; border:none; outline:none;
+  text-align:center; cursor:ns-resize; user-select:none;
+  padding:5px 2px; border-radius:3px;
+  transition:background .12s, color .12s;
+  -moz-appearance:textfield;
+}
+.dt-seg:focus { background:var(--gold-bg); color:var(--gold); }
+.dt-seg::-webkit-inner-spin-button,
+.dt-seg::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+.dt-sep { font-size:13px; color:var(--muted); line-height:1; padding:0 1px; pointer-events:none; flex-shrink:0; }
+.dt-sep-space { width:7px; flex-shrink:0; }
+
+.ts-label { font-size:11px; font-weight:500; color:var(--muted); white-space:nowrap; }
+
 .static-badge {
   font-size:10px; font-weight:600; color:var(--gold); background:var(--gold-bg);
   border:1px solid var(--gold-dim); border-radius:3px; padding:2px 7px;
@@ -321,13 +345,6 @@ header { display:flex; align-items:center; gap:12px; padding:0 20px; height:36px
 input[type=range] {
   flex:1; min-width:80px; accent-color:var(--gold); height:3px; cursor:pointer;
 }
-input[type=time] {
-  background:var(--navy3); border:1px solid var(--border2); border-radius:4px;
-  color:var(--text); font-family:var(--font); font-size:10px; padding:2px 6px;
-  outline:none; width:84px; flex-shrink:0;
-}
-input[type=time]:focus { border-color:var(--gold); }
-
 /* replay */
 .replay-btn {
   background:transparent; border:1px solid var(--border2); border-radius:4px;
@@ -458,9 +475,9 @@ input[type=time]:focus { border-color:var(--gold); }
     <div class="calc-toolbar">
       <span class="calc-toolbar-label">Time Range</span>
       <span class="ts-label">From</span>
-      <input class="ts-input" type="datetime-local" id="calcFrom" step="1">
+      <span id="dtCalcFrom" class="dt-picker"></span>
       <span class="ts-label">To</span>
-      <input class="ts-input" type="datetime-local" id="calcTo" step="1">
+      <span id="dtCalcTo" class="dt-picker"></span>
       <button class="ts-apply" onclick="runCalculations()">Analyse</button>
       <span id="calcStatus" class="static-badge hidden"></span>
     </div>
@@ -582,9 +599,9 @@ function buildChartPanel() {
 
       <div class="static-inputs ${staticMode?'':'hidden'}" id="staticInputs">
         <span class="ts-label">From</span>
-        <input class="ts-input" type="datetime-local" id="tsFrom" step="1">
+        <span id="dtFrom" class="dt-picker"></span>
         <span class="ts-label">To</span>
-        <input class="ts-input" type="datetime-local" id="tsTo" step="1">
+        <span id="dtTo" class="dt-picker"></span>
         <button class="ts-apply" onclick="applyStaticRange()">Apply</button>
       </div>
 
@@ -611,6 +628,9 @@ function buildChartPanel() {
     if (v >= 5 && v <= 3600) { windowSec = v; document.querySelectorAll('.preset').forEach(b => b.classList.remove('on')); }
   });
   setWinHighlight(windowSec);
+  // Init custom pickers now that their containers exist in the DOM
+  dtInit('dtFrom', null);
+  dtInit('dtTo',   null);
   prefillStaticInputs();
   updateChartLegend();
 }
@@ -651,12 +671,9 @@ function toLocalDatetimeStr(ms) {
 }
 
 function prefillStaticInputs() {
-  const fromEl = document.getElementById('tsFrom');
-  const toEl   = document.getElementById('tsTo');
-  if (!fromEl || !toEl) return;
   const now = Date.now();
-  fromEl.value = toLocalDatetimeStr(staticFrom || now - windowSec * 1000);
-  toEl.value   = toLocalDatetimeStr(staticTo   || now);
+  dtSet('dtFrom', staticFrom || now - windowSec * 1000);
+  dtSet('dtTo',   staticTo   || now);
 }
 
 function setMode(mode) {
@@ -667,7 +684,6 @@ function setMode(mode) {
   document.getElementById('liveInputs')  ?.classList.toggle('hidden',  staticMode);
   document.getElementById('staticBadge') ?.classList.toggle('hidden', !staticMode);
   if (staticMode) {
-    // snapshot current window as default static range
     if (!staticFrom || !staticTo) {
       staticTo   = Date.now();
       staticFrom = staticTo - windowSec * 1000;
@@ -682,14 +698,11 @@ function setMode(mode) {
 }
 
 function applyStaticRange() {
-  const fromEl = document.getElementById('tsFrom');
-  const toEl   = document.getElementById('tsTo');
-  if (!fromEl || !toEl) return;
-  const f = new Date(fromEl.value).getTime();
-  const t = new Date(toEl.value).getTime();
-  if (isNaN(f) || isNaN(t) || f >= t) {
-    fromEl.style.borderColor = 'var(--red)'; toEl.style.borderColor = 'var(--red)';
-    setTimeout(() => { fromEl.style.borderColor=''; toEl.style.borderColor=''; }, 1200);
+  const f = dtGet('dtFrom');
+  const t = dtGet('dtTo');
+  if (!f || !t || f >= t) {
+    const flash = id => { const el = document.getElementById(id); if(el){el.style.borderColor='var(--red)'; setTimeout(()=>el.style.borderColor='',1200);} };
+    flash('dtFrom'); flash('dtTo');
     return;
   }
   staticFrom = f; staticTo = t;
@@ -981,12 +994,12 @@ function activateMap() {
       <div class="map-toolbar-row2">
         <div class="scrubber-wrap">
           <span class="scrubber-label">Start</span>
-          <input type="time" id="timeStart" step="1" oninput="onTimeInput('start')">
+          <span id="dtMapStart" class="dt-picker"></span>
           <input type="range" id="scrubStart" min="0" max="1000" value="0" step="1" oninput="onScrub('start')">
         </div>
         <div class="scrubber-wrap">
           <span class="scrubber-label">End</span>
-          <input type="time" id="timeEnd" step="1" oninput="onTimeInput('end')">
+          <span id="dtMapEnd" class="dt-picker"></span>
           <input type="range" id="scrubEnd" min="0" max="1000" value="1000" step="1" oninput="onScrub('end')">
         </div>
         <button class="replay-btn" id="replayBtn" onclick="toggleReplay()">▶ Replay</button>
@@ -1011,6 +1024,9 @@ function activateMap() {
     maxZoom:19,
   }).addTo(leafletMap);
 
+  // Init custom time pickers for the map scrubbers
+  dtInit('dtMapStart', () => onMapPickerChange('start'));
+  dtInit('dtMapEnd',   () => onMapPickerChange('end'));
 
   drawMapTrace();
   syncTimeInputs();
@@ -1140,22 +1156,6 @@ function setColorBy(field) {
   drawMapTrace();
 }
 
-// fmt: timestamp → "HH:MM:SS" for <input type="time">
-function tsToTimeStr(t) {
-  const d = new Date(t);
-  return d.getHours().toString().padStart(2,'0') + ':' +
-         d.getMinutes().toString().padStart(2,'0') + ':' +
-         d.getSeconds().toString().padStart(2,'0');
-}
-
-// parse "HH:MM:SS" back to today's timestamp
-function timeStrToTs(str, refDate) {
-  const [h,m,s] = str.split(':').map(Number);
-  const d = new Date(refDate);
-  d.setHours(h, m, s, 0);
-  return d.getTime();
-}
-
 function onScrub(which) {
   const sEl = document.getElementById('scrubStart');
   const eEl = document.getElementById('scrubEnd');
@@ -1171,28 +1171,21 @@ function onScrub(which) {
   drawMapTrace();
 }
 
-function onTimeInput(which) {
+function onMapPickerChange(which) {
   const n = gpsHistory.length;
   if (n < 2) return;
   const tFirst = gpsHistory[0].t, tLast = gpsHistory[n-1].t;
-  const ref = new Date(tFirst);
-
-  const tsStart = timeStrToTs(document.getElementById('timeStart').value, ref);
-  const tsEnd   = timeStrToTs(document.getElementById('timeEnd').value,   ref);
-
-  // clamp to data range
+  const tsStart = dtGet('dtMapStart') || tFirst;
+  const tsEnd   = dtGet('dtMapEnd')   || tLast;
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   let fracS = (clamp(tsStart, tFirst, tLast) - tFirst) / (tLast - tFirst);
   let fracE = (clamp(tsEnd,   tFirst, tLast) - tFirst) / (tLast - tFirst);
   if (which === 'start' && fracS > fracE) fracS = fracE;
   if (which === 'end'   && fracE < fracS) fracE = fracS;
-
   mapRangeStart = fracS;
   mapRangeEnd   = fracE;
-
   document.getElementById('scrubStart').value = Math.round(fracS * 1000);
   document.getElementById('scrubEnd').value   = Math.round(fracE * 1000);
-
   stopReplay();
   drawMapTrace();
 }
@@ -1203,10 +1196,8 @@ function syncTimeInputs() {
   const tFirst = gpsHistory[0].t, tLast = gpsHistory[n-1].t;
   const tS = tFirst + mapRangeStart * (tLast - tFirst);
   const tE = tFirst + mapRangeEnd   * (tLast - tFirst);
-  const tsEl = document.getElementById('timeStart');
-  const teEl = document.getElementById('timeEnd');
-  if (tsEl) tsEl.value = tsToTimeStr(tS);
-  if (teEl) teEl.value = tsToTimeStr(tE);
+  dtSet('dtMapStart', tS);
+  dtSet('dtMapEnd',   tE);
 }
 
 function updateScrubInfo(iStart, iEnd, n) {
@@ -1470,6 +1461,124 @@ function toggleCardStrip() {
   setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 320);
 }
 
+// ─── CUSTOM DATETIME PICKER ──────────────────────────────────────────────────
+// Each picker is a <span id="..."> populated with individual numeric segments
+// (Y, M, D, h, m, s). Scroll, drag up/down, or arrow-key to change each part.
+
+const dtState = {};  // id → { y, mo, d, h, mi, s, onChange }
+
+const DT_SEGS = [
+  { key:'y',  w:42, min:2020, max:2099, pad:4 },
+  { sep:'-' },
+  { key:'mo', w:24, min:1,    max:12,   pad:2 },
+  { sep:'-' },
+  { key:'d',  w:24, min:1,    max:31,   pad:2 },
+  { sep:' ', cls:'dt-sep-space' },
+  { key:'h',  w:24, min:0,    max:23,   pad:2 },
+  { sep:':' },
+  { key:'mi', w:24, min:0,    max:59,   pad:2 },
+  { sep:':' },
+  { key:'s',  w:24, min:0,    max:59,   pad:2 },
+];
+
+function dtInit(id, onChange) {
+  const wrap = document.getElementById(id);
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const now = new Date();
+  dtState[id] = { y: now.getFullYear(), mo: now.getMonth()+1, d: now.getDate(),
+                  h: now.getHours(), mi: now.getMinutes(), s: now.getSeconds(),
+                  onChange: onChange || null };
+
+  DT_SEGS.forEach(def => {
+    if (def.sep !== undefined) {
+      const sp = document.createElement('span');
+      sp.className = def.cls || 'dt-sep';
+      sp.textContent = def.sep;
+      wrap.appendChild(sp);
+      return;
+    }
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.className = 'dt-seg';
+    inp.style.width = def.w + 'px';
+    inp.dataset.key = def.key;
+    inp.dataset.min = def.min;
+    inp.dataset.max = def.max;
+    inp.dataset.pad = def.pad;
+    inp.value = String(dtState[id][def.key]).padStart(def.pad, '0');
+
+    inp.addEventListener('wheel', e => {
+      e.preventDefault();
+      dtStep(id, inp, e.deltaY < 0 ? 1 : -1);
+    }, { passive: false });
+
+    let dragY = null, dragActive = false;
+    inp.addEventListener('mousedown', e => {
+      dragY = e.clientY; dragActive = false; inp.focus(); e.preventDefault();
+    });
+    inp.addEventListener('mousemove', e => {
+      if (dragY === null) return;
+      const delta = Math.round((dragY - e.clientY) / 5);
+      if (delta !== 0) { dragActive = true; dtStep(id, inp, delta); dragY = e.clientY; }
+    });
+    inp.addEventListener('mouseup', () => { dragY = null; });
+    inp.addEventListener('mouseleave', () => { dragY = null; });
+
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp')   { e.preventDefault(); dtStep(id, inp,  1); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); dtStep(id, inp, -1); }
+    });
+
+    inp.addEventListener('change', () => {
+      const v = parseInt(inp.value);
+      if (!isNaN(v)) {
+        dtState[id][def.key] = Math.max(def.min, Math.min(def.max, v));
+        dtRefresh(id);
+        dtState[id].onChange && dtState[id].onChange();
+      }
+    });
+
+    wrap.appendChild(inp);
+  });
+}
+
+function dtStep(id, inp, delta) {
+  const st = dtState[id]; if (!st) return;
+  const key = inp.dataset.key;
+  const min = parseInt(inp.dataset.min), max = parseInt(inp.dataset.max);
+  const span = max - min + 1;
+  let v = st[key] + delta;
+  v = min + ((v - min) % span + span) % span;
+  st[key] = v;
+  inp.value = String(v).padStart(parseInt(inp.dataset.pad), '0');
+  st.onChange && st.onChange();
+}
+
+function dtRefresh(id) {
+  const wrap = document.getElementById(id);
+  if (!wrap || !dtState[id]) return;
+  wrap.querySelectorAll('.dt-seg').forEach(inp => {
+    inp.value = String(dtState[id][inp.dataset.key]).padStart(parseInt(inp.dataset.pad), '0');
+  });
+}
+
+function dtSet(id, ms) {
+  if (!document.getElementById(id)) return;
+  if (!dtState[id]) dtInit(id, null);
+  const d = new Date(ms);
+  Object.assign(dtState[id], {
+    y: d.getFullYear(), mo: d.getMonth()+1, d: d.getDate(),
+    h: d.getHours(), mi: d.getMinutes(), s: d.getSeconds()
+  });
+  dtRefresh(id);
+}
+
+function dtGet(id) {
+  const st = dtState[id]; if (!st) return null;
+  return new Date(st.y, st.mo-1, st.d, st.h, st.mi, st.s, 0).getTime();
+}
+
 // ─── TAB SWITCHING ───────────────────────────────────────────────────────────
 let activeTab = 'data';
 
@@ -1495,18 +1604,17 @@ function switchTab(tab) {
     document.getElementById('mainArea').style.display = 'none';
     calcTab.classList.add('active');
     stopLoop();
-    // pre-fill time range
+    // Init calc pickers if not yet done, then pre-fill
+    if (!dtState['dtCalcFrom']) dtInit('dtCalcFrom', null);
+    if (!dtState['dtCalcTo'])   dtInit('dtCalcTo',   null);
     prefillCalcInputs();
   }
 }
 
 function prefillCalcInputs() {
-  const fromEl = document.getElementById('calcFrom');
-  const toEl   = document.getElementById('calcTo');
-  if (!fromEl || !toEl) return;
   const now = Date.now();
-  fromEl.value = toLocalDatetimeStr(now - windowSec * 1000);
-  toEl.value   = toLocalDatetimeStr(now);
+  dtSet('dtCalcFrom', now - windowSec * 1000);
+  dtSet('dtCalcTo',   now);
 }
 
 // ─── CALCULATIONS ENGINE ─────────────────────────────────────────────────────
@@ -1546,15 +1654,12 @@ function average(hist, tStart, tEnd) {
 }
 
 function runCalculations() {
-  const fromEl = document.getElementById('calcFrom');
-  const toEl   = document.getElementById('calcTo');
   const statusEl = document.getElementById('calcStatus');
-
-  const f = new Date(fromEl.value).getTime();
-  const t = new Date(toEl.value).getTime();
-  if (isNaN(f) || isNaN(t) || f >= t) {
-    fromEl.style.borderColor = 'var(--red)'; toEl.style.borderColor = 'var(--red)';
-    setTimeout(() => { fromEl.style.borderColor=''; toEl.style.borderColor=''; }, 1200);
+  const f = dtGet('dtCalcFrom');
+  const t = dtGet('dtCalcTo');
+  if (!f || !t || f >= t) {
+    const flash = id => { const el = document.getElementById(id); if(el){el.style.borderColor='var(--red)'; setTimeout(()=>el.style.borderColor='',1200);} };
+    flash('dtCalcFrom'); flash('dtCalcTo');
     return;
   }
 
