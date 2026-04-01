@@ -343,6 +343,14 @@ input[type=time]:focus { border-color:var(--gold); }
 /* navy tint sits over tiles but under Leaflet SVG pane (z-index 200) */
 
 
+/* dark-mode tile filter */
+.leaflet-layer,
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out,
+.leaflet-control-attribution {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
 /* override leaflet chrome to fit theme */
 .leaflet-control-attribution { background:rgba(13,27,42,.75) !important; color:var(--muted) !important; font-size:9px !important; }
 .leaflet-control-attribution a { color:var(--muted) !important; }
@@ -916,15 +924,6 @@ function activateMap() {
     attribution:'© OpenStreetMap contributors',
     maxZoom:19,
   }).addTo(leafletMap);
-
-  // overlay: sits between tile pane (z:200) and SVG overlay pane (z:400)
-  // so tiles are dimmed but the coloured path polylines remain fully visible
-  const tintPane = leafletMap.createPane('tintPane');
-  tintPane.style.zIndex = 250;
-  tintPane.style.pointerEvents = 'none';
-  tintPane.innerHTML = `
-    <div style="position:absolute;inset:0;background:rgba(13,27,42,0.68)"></div>
-    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 30%,rgba(13,27,42,0.45) 70%,rgba(13,27,42,0.78) 100%)"></div>`;
 
 
   drawMapTrace();
