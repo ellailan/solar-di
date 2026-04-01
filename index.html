@@ -28,14 +28,28 @@
 
 html, body { height:100%; background:var(--navy); color:var(--text); font-family:var(--font); font-size:14px; overflow:hidden; }
 
-.shell { display:grid; grid-template-rows:36px auto 1fr; height:100vh; }
-#mainArea { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.shell { display:flex; flex-direction:column; height:100vh; }
+#dataTab { display:contents; }
+#calcTab { display:none; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
+#calcTab.active { display:flex; }
+#mainArea { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
 #mainArea > .plot-panel, #mainArea > .map-panel { flex:1; min-height:0; }
 
 /* ── HEADER ── */
 header { display:flex; align-items:center; gap:12px; padding:0 20px; height:36px; background:var(--navy2); border-bottom:1px solid var(--border); }
 .logo { font-size:14px; font-weight:700; color:var(--gold); white-space:nowrap; letter-spacing:.01em; }
 .logo span { color:var(--text); font-weight:500; }
+
+/* ── TOP TABS ── */
+.top-tabs { display:flex; align-items:stretch; gap:0; margin-left:16px; height:100%; }
+.top-tab {
+  background:transparent; border:none; border-bottom:2px solid transparent;
+  color:var(--muted); font-family:var(--font); font-size:12px; font-weight:600;
+  padding:0 16px; cursor:pointer; letter-spacing:.04em; text-transform:uppercase;
+  transition:color .15s, border-color .15s;
+}
+.top-tab:hover { color:var(--text); }
+.top-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
 
 /* ── CARD STRIP ── */
 .card-strip-wrapper {
@@ -343,6 +357,54 @@ input[type=time]:focus { border-color:var(--gold); }
 /* navy tint sits over tiles but under Leaflet SVG pane (z-index 200) */
 
 
+/* ── CALCULATIONS TAB ── */
+#dataTab { display:contents; }
+.calc-toolbar {
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  padding:9px 20px; background:var(--navy2);
+  border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.calc-toolbar-label { font-size:11px; font-weight:700; color:var(--gold); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+.calc-body {
+  flex:1; overflow-y:auto; padding:20px 20px 32px;
+  background:var(--navy);
+}
+.calc-empty { height:100%; display:flex; align-items:center; justify-content:center; }
+
+/* summary stat cards */
+.calc-section-title {
+  font-size:11px; font-weight:700; color:var(--gold);
+  letter-spacing:.08em; text-transform:uppercase;
+  margin:24px 0 12px; border-bottom:1px solid var(--border); padding-bottom:6px;
+}
+.calc-section-title:first-child { margin-top:0; }
+.stat-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin-bottom:8px;
+}
+.stat-card {
+  background:var(--navy2); border:1px solid var(--border);
+  border-radius:6px; padding:12px 14px;
+  border-top:2px solid var(--card-color,var(--gold));
+}
+.stat-card-label { font-size:11px; font-weight:500; color:var(--muted); margin-bottom:5px; }
+.stat-card-value { font-size:22px; font-weight:700; color:var(--card-color,var(--text)); line-height:1.1; }
+.stat-card-unit { font-size:12px; font-weight:400; color:var(--muted); margin-left:3px; }
+
+/* mini charts */
+.mini-charts-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; margin-bottom:8px;
+}
+.mini-chart-card {
+  background:var(--navy2); border:1px solid var(--border); border-radius:6px; overflow:hidden;
+}
+.mini-chart-title {
+  font-size:11px; font-weight:600; color:var(--muted);
+  padding:8px 12px 6px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:6px;
+}
+.mini-chart-title .dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+.mini-chart-canvas { display:block; width:100%; height:120px; }
+
 /* dark-mode tile filter */
 .leaflet-layer,
 .leaflet-control-zoom-in,
@@ -363,8 +425,13 @@ input[type=time]:focus { border-color:var(--gold); }
 
   <header>
     <div class="logo">UBC <span>Solar</span></div>
+    <nav class="top-tabs">
+      <button class="top-tab active" id="tabData" onclick="switchTab('data')">Data</button>
+      <button class="top-tab" id="tabCalc" onclick="switchTab('calc')">Calculations</button>
+    </nav>
   </header>
 
+  <div id="dataTab">
   <div class="card-strip-wrapper" id="cardStripWrapper">
     <div class="card-strip" id="cardStrip"></div>
     <div class="card-strip-header">
@@ -381,6 +448,25 @@ input[type=time]:focus { border-color:var(--gold); }
     <div class="plot-panel" id="plotPanel">
       <div class="plot-empty">
         <div class="plot-empty-hint">Select a metric above to view its plot, or open the Map view</div>
+      </div>
+    </div>
+  </div>
+  </div><!-- /#dataTab -->
+
+  <!-- ── CALCULATIONS TAB ── -->
+  <div id="calcTab" >
+    <div class="calc-toolbar">
+      <span class="calc-toolbar-label">Time Range</span>
+      <span class="ts-label">From</span>
+      <input class="ts-input" type="datetime-local" id="calcFrom" step="1">
+      <span class="ts-label">To</span>
+      <input class="ts-input" type="datetime-local" id="calcTo" step="1">
+      <button class="ts-apply" onclick="runCalculations()">Analyse</button>
+      <span id="calcStatus" class="static-badge hidden"></span>
+    </div>
+    <div id="calcBody" class="calc-body">
+      <div class="calc-empty">
+        <div class="plot-empty-hint">Set a time range and click Analyse to see aggregate statistics</div>
       </div>
     </div>
   </div>
@@ -1382,6 +1468,275 @@ function toggleCardStrip() {
   label.textContent = collapsed ? 'Show Metrics' : 'Hide Metrics';
   // allow map to resize after animation
   setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 320);
+}
+
+// ─── TAB SWITCHING ───────────────────────────────────────────────────────────
+let activeTab = 'data';
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tabData').classList.toggle('active', tab === 'data');
+  document.getElementById('tabCalc').classList.toggle('active', tab === 'calc');
+
+  const dataTab = document.getElementById('dataTab');
+  const calcTab = document.getElementById('calcTab');
+
+  if (tab === 'data') {
+    // restore data tab children visibility
+    document.getElementById('cardStripWrapper').style.display = '';
+    document.getElementById('mainArea').style.display = '';
+    calcTab.classList.remove('active');
+    // resume loop if needed
+    if (activeFields.size > 0 && !staticMode) startLoop();
+    if (leafletMap) leafletMap.invalidateSize();
+  } else {
+    // hide data children
+    document.getElementById('cardStripWrapper').style.display = 'none';
+    document.getElementById('mainArea').style.display = 'none';
+    calcTab.classList.add('active');
+    stopLoop();
+    // pre-fill time range
+    prefillCalcInputs();
+  }
+}
+
+function prefillCalcInputs() {
+  const fromEl = document.getElementById('calcFrom');
+  const toEl   = document.getElementById('calcTo');
+  if (!fromEl || !toEl) return;
+  const now = Date.now();
+  fromEl.value = toLocalDatetimeStr(now - windowSec * 1000);
+  toEl.value   = toLocalDatetimeStr(now);
+}
+
+// ─── CALCULATIONS ENGINE ─────────────────────────────────────────────────────
+
+// Interpolate metric value at time t using binary search
+function metricAt(hist, t) {
+  if (!hist || !hist.length) return null;
+  if (t <= hist[0].t) return hist[0].v;
+  if (t >= hist[hist.length-1].t) return hist[hist.length-1].v;
+  let lo = 0, hi = hist.length - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (hist[mid].t <= t) lo = mid; else hi = mid;
+  }
+  const frac = (t - hist[lo].t) / (hist[hi].t - hist[lo].t || 1);
+  return hist[lo].v + frac * (hist[hi].v - hist[lo].v);
+}
+
+// Integrate a metric over a set of timestamps using trapezoidal rule → result in metric-unit × seconds
+function integrate(hist, tStart, tEnd) {
+  if (!hist || !hist.length) return 0;
+  const pts = hist.filter(p => p.t >= tStart && p.t <= tEnd);
+  if (pts.length < 2) return 0;
+  let sum = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dt = (pts[i].t - pts[i-1].t) / 1000; // seconds
+    sum += 0.5 * (pts[i-1].v + pts[i].v) * dt;
+  }
+  return sum;
+}
+
+// Average of metric over [tStart, tEnd]
+function average(hist, tStart, tEnd) {
+  const pts = hist ? hist.filter(p => p.t >= tStart && p.t <= tEnd) : [];
+  if (!pts.length) return null;
+  return pts.reduce((s, p) => s + p.v, 0) / pts.length;
+}
+
+function runCalculations() {
+  const fromEl = document.getElementById('calcFrom');
+  const toEl   = document.getElementById('calcTo');
+  const statusEl = document.getElementById('calcStatus');
+
+  const f = new Date(fromEl.value).getTime();
+  const t = new Date(toEl.value).getTime();
+  if (isNaN(f) || isNaN(t) || f >= t) {
+    fromEl.style.borderColor = 'var(--red)'; toEl.style.borderColor = 'var(--red)';
+    setTimeout(() => { fromEl.style.borderColor=''; toEl.style.borderColor=''; }, 1200);
+    return;
+  }
+
+  statusEl.textContent = 'Computing…';
+  statusEl.classList.remove('hidden');
+
+  // filter data to range
+  const gps = gpsHistory.filter(p => p.t >= f && p.t <= t);
+  const hists = {};
+  METRICS.forEach(m => { hists[m.field] = history[m.field].filter(p => p.t >= f && p.t <= t); });
+
+  const body = document.getElementById('calcBody');
+
+  // ── build overall stats ──
+  const durSec   = (t - f) / 1000;
+  const avgSpeed = average(hists['speed'], f, t);
+  const socStart = hists['battery_soc'].length ? hists['battery_soc'][0].v : null;
+  const socEnd   = hists['battery_soc'].length ? hists['battery_soc'][hists['battery_soc'].length-1].v : null;
+  const deltaSoc = (socStart !== null && socEnd !== null) ? (socStart - socEnd) : null;
+  // Energy: integrate motor_power (kW) over time (s) → kWh
+  const motorEnergyKWh = integrate(hists['motor_power'], f, t) / 3600;
+  const arrayEnergyKWh = integrate(hists['array_power'], f, t) / 3600;
+  const netEnergyKWh   = motorEnergyKWh - arrayEnergyKWh;
+  const avgMotor = average(hists['motor_power'], f, t);
+  const avgArray = average(hists['array_power'], f, t);
+
+  // ── render ──
+  const fmt = (v, dec, fallback='—') => v !== null && !isNaN(v) ? v.toFixed(dec) : fallback;
+
+  body.innerHTML = `
+    <div class="calc-section-title">Summary</div>
+    <div class="stat-grid">
+      <div class="stat-card" style="--card-color:#60a5fa">
+        <div class="stat-card-label">Duration</div>
+        <div class="stat-card-value">${fmt(durSec/60,1)}<span class="stat-card-unit">min</span></div>
+      </div>
+      <div class="stat-card" style="--card-color:#60a5fa">
+        <div class="stat-card-label">Avg Speed</div>
+        <div class="stat-card-value">${fmt(avgSpeed,1)}<span class="stat-card-unit">km/h</span></div>
+      </div>
+      <div class="stat-card" style="--card-color:#4caf7d">
+        <div class="stat-card-label">SOC Start</div>
+        <div class="stat-card-value">${fmt(socStart,1)}<span class="stat-card-unit">%</span></div>
+      </div>
+      <div class="stat-card" style="--card-color:#4caf7d">
+        <div class="stat-card-label">SOC End</div>
+        <div class="stat-card-value">${fmt(socEnd,1)}<span class="stat-card-unit">%</span></div>
+      </div>
+      <div class="stat-card" style="--card-color:${deltaSoc !== null && deltaSoc > 0 ? 'var(--red)' : 'var(--green)'}">
+        <div class="stat-card-label">Δ SOC</div>
+        <div class="stat-card-value">${deltaSoc !== null ? (deltaSoc > 0 ? '−' : '+') + fmt(Math.abs(deltaSoc),1) : '—'}<span class="stat-card-unit">%</span></div>
+      </div>
+      <div class="stat-card" style="--card-color:#e05c4a">
+        <div class="stat-card-label">Motor Energy</div>
+        <div class="stat-card-value">${fmt(motorEnergyKWh*1000,1)}<span class="stat-card-unit">Wh</span></div>
+      </div>
+      <div class="stat-card" style="--card-color:#f0a500">
+        <div class="stat-card-label">Array Energy</div>
+        <div class="stat-card-value">${fmt(arrayEnergyKWh*1000,1)}<span class="stat-card-unit">Wh</span></div>
+      </div>
+      <div class="stat-card" style="--card-color:${netEnergyKWh > 0 ? 'var(--red)' : 'var(--green)'}">
+        <div class="stat-card-label">Net Energy</div>
+        <div class="stat-card-value">${fmt(netEnergyKWh*1000,1)}<span class="stat-card-unit">Wh</span></div>
+      </div>
+      <div class="stat-card" style="--card-color:#e05c4a">
+        <div class="stat-card-label">Avg Motor Power</div>
+        <div class="stat-card-value">${fmt(avgMotor,2)}<span class="stat-card-unit">kW</span></div>
+      </div>
+      <div class="stat-card" style="--card-color:#f0a500">
+        <div class="stat-card-label">Avg Array Power</div>
+        <div class="stat-card-value">${fmt(avgArray,2)}<span class="stat-card-unit">kW</span></div>
+      </div>
+    </div>
+
+    <div class="calc-section-title">Time-Series Graphs</div>
+    <div class="mini-charts-grid" id="miniChartsGrid"></div>
+  `;
+
+  // draw mini charts
+  drawMiniCharts(f, t);
+
+  statusEl.textContent = 'Done';
+  setTimeout(() => statusEl.classList.add('hidden'), 2000);
+}
+
+// ─── MINI CHARTS ─────────────────────────────────────────────────────────────
+function drawMiniCharts(tFrom, tTo) {
+  const grid = document.getElementById('miniChartsGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  METRICS.forEach(m => {
+    const pts = history[m.field].filter(p => p.t >= tFrom && p.t <= tTo);
+
+    const card = document.createElement('div');
+    card.className = 'mini-chart-card';
+    card.innerHTML = `
+      <div class="mini-chart-title">
+        <span class="dot" style="background:${m.color}"></span>
+        ${m.label} <span style="font-size:10px;color:var(--muted);margin-left:auto">${m.unit}</span>
+      </div>
+      <canvas class="mini-chart-canvas" width="280" height="120"></canvas>
+    `;
+    grid.appendChild(card);
+
+    requestAnimationFrame(() => {
+      const canvas = card.querySelector('canvas');
+      const dpr = window.devicePixelRatio || 1;
+      const W = canvas.offsetWidth || 280, H = 120;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+
+      const PAD = { t:8, b:20, l:38, r:8 };
+      const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+      const LABEL = '#7a8fa3';
+      const FONT  = '9px Poppins,sans-serif';
+
+      ctx.clearRect(0,0,W,H);
+
+      if (pts.length < 2) {
+        ctx.fillStyle = LABEL; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.font = '10px Poppins,sans-serif';
+        ctx.fillText('No data', PAD.l + cW/2, PAD.t + cH/2);
+        return;
+      }
+
+      const vs = pts.map(p=>p.v);
+      const yMin = Math.min(...vs), yMax = Math.max(...vs);
+      const yRange = yMax - yMin || 1;
+      // Use actual data bounds for x-axis so the line always fills the chart width
+      const tActualFrom = pts[0].t;
+      const tActualTo   = pts[pts.length - 1].t;
+      const tSpan = tActualTo - tActualFrom || 1;
+
+      const toX = t => PAD.l + ((t - tActualFrom) / tSpan) * cW;
+      const toY = v => PAD.t + cH - ((v - yMin) / yRange) * cH;
+
+      // grid
+      ctx.strokeStyle = '#ffffff0a'; ctx.lineWidth = .5;
+      for (let i=0;i<=4;i++) {
+        const y = PAD.t + (i/4)*cH;
+        ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l+cW, y); ctx.stroke();
+      }
+
+      // y labels
+      ctx.font = FONT; ctx.fillStyle = LABEL; ctx.textAlign='right'; ctx.textBaseline='middle';
+      for (let i=0;i<=4;i++) {
+        const v = yMin + (yRange/4)*(4-i);
+        ctx.fillText(v.toFixed(m.decimals<=1?1:2), PAD.l-3, PAD.t+(i/4)*cH);
+      }
+
+      // x labels — adapt tick count and format to actual data span
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      const xN = Math.min(4, Math.max(1, Math.floor(cW/55)));
+      const showSecs = tSpan < 90000; // under 90s: show HH:MM:SS
+      for (let i=0;i<=xN;i++) {
+        const tt = tActualFrom + (i/xN)*tSpan;
+        const d = new Date(tt);
+        const lbl = showSecs
+          ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
+          : `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        ctx.fillText(lbl, toX(tt), PAD.t+cH+3);
+      }
+
+      // axis
+      ctx.strokeStyle = '#ffffff18'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(PAD.l,PAD.t); ctx.lineTo(PAD.l,PAD.t+cH); ctx.lineTo(PAD.l+cW,PAD.t+cH); ctx.stroke();
+
+      // fill
+      ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
+      pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
+      ctx.lineTo(toX(pts[pts.length-1].t), PAD.t+cH);
+      ctx.lineTo(toX(pts[0].t), PAD.t+cH);
+      ctx.closePath(); ctx.fillStyle = m.color+'18'; ctx.fill();
+
+      // line
+      ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
+      pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
+      ctx.strokeStyle = m.color; ctx.lineWidth=1.5;
+      ctx.lineJoin='round'; ctx.lineCap='round'; ctx.stroke();
+    });
+  });
 }
 
 setInterval(dummyTick, 500);
