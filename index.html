@@ -401,13 +401,13 @@ if (typeof L === 'undefined') {
 const METRICS = [
   { field:'motor_power',    label:'Motor Power',    unit:'kW',   color:'#e05c4a', transform:v=>v/1000, decimals:2, yMin:0,   yMax:5,
     help:'Electrical power drawn by the motor controller. High values indicate acceleration or hill climbing.' },
-  { field:'array_power',    label:'Array Power',    unit:'kW',   color:'#c9a84c', transform:v=>v/1000, decimals:2, yMin:0,   yMax:3,
+  { field:'array_power',    label:'Array Power',    unit:'kW',   color:'#f0a500', transform:v=>v/1000, decimals:2, yMin:0,   yMax:3,
     help:'Solar panel output. Peaks in direct sunlight; drops in shade or cloud cover.' },
   { field:'battery_soc',    label:'Battery SOC',    unit:'%',    color:'#4caf7d', decimals:1, yMin:0,   yMax:100,
     help:'State of charge of the battery pack. A steady decline indicates net energy consumption.' },
   { field:'speed',          label:'Speed',          unit:'km/h', color:'#60a5fa', decimals:1, yMin:0,   yMax:100,
     help:'Vehicle speed. Compare with motor power to spot inefficient phases.' },
-  { field:'steering_angle', label:'Steering Angle', unit:'°',    color:'#34d399', decimals:1, yMin:-45, yMax:45,
+  { field:'steering_angle', label:'Steering Angle', unit:'°',    color:'#f472b6', decimals:1, yMin:-45, yMax:45,
     help:'Steering wheel deflection. Large sustained angles increase rolling resistance.' },
   { field:'acceleration',   label:'Acceleration',   unit:'g',    color:'#a78bfa', decimals:2, yMin:-1,  yMax:1,
     help:'Longitudinal acceleration. Smooth profiles minimise energy loss.' },
@@ -464,20 +464,21 @@ mapCard.addEventListener('click', activateMap);
 strip.appendChild(mapCard);
 
 // ─── TIME-DOMAIN PANEL ──────────────────────────────────────────────────────
-let activeField = null;
-let windowSec   = 60;
-let rafId       = null;
+let activeField  = null;   // kept for map compat; null when multi-plot active
+let activeFields = new Set();
+let windowSec    = 60;
+let rafId        = null;
 
-function buildChartPanel(field) {
-  const m = METRICS.find(x => x.field === field);
-  if (!m) return;
+function buildChartPanel() {
   const panel = document.getElementById('plotPanel');
   panel.className = 'plot-panel';
+  // derive a representative color from the first active metric
+  const firstM = METRICS.find(x => activeFields.has(x.field));
+  const titleColor = firstM ? firstM.color : 'var(--text)';
+
   panel.innerHTML = `
-    <div class="plot-toolbar" style="--card-color:${m.color}">
-      <span class="plot-name">${m.label}</span>
-      <span class="plot-unit-badge">${m.unit}</span>
-      <span class="plot-help">${m.help}</span>
+    <div class="plot-toolbar" id="plotToolbar" style="--card-color:${titleColor}">
+      <div id="chartLegend" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1;min-width:0;"></div>
 
       <div class="mode-toggle">
         <button class="mode-btn ${!staticMode?'on':''}" id="btnLive" onclick="setMode('live')">⬤ Live</button>
@@ -516,8 +517,31 @@ function buildChartPanel(field) {
     if (v >= 5 && v <= 3600) { windowSec = v; document.querySelectorAll('.preset').forEach(b => b.classList.remove('on')); }
   });
   setWinHighlight(windowSec);
-  // prefill static inputs with current range or sensible defaults
   prefillStaticInputs();
+  updateChartLegend();
+}
+
+function updateChartLegend() {
+  const el = document.getElementById('chartLegend');
+  if (!el) return;
+  el.innerHTML = '';
+  METRICS.filter(m => activeFields.has(m.field)).forEach(m => {
+    const chip = document.createElement('div');
+    chip.style.cssText = 'display:flex;align-items:center;gap:5px;cursor:pointer;padding:3px 8px 3px 6px;border-radius:4px;border:1px solid ' + m.color + '40;background:' + m.color + '10;transition:background .15s;';
+    chip.title = 'Click to remove ' + m.label;
+    chip.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${m.color};flex-shrink:0;"></span><span style="font-size:12px;font-weight:600;color:${m.color};white-space:nowrap;">${m.label}</span><span style="font-size:11px;color:var(--muted);margin-left:2px;">${m.unit}</span>`;
+    chip.addEventListener('mouseenter', () => chip.style.background = m.color + '20');
+    chip.addEventListener('mouseleave', () => chip.style.background = m.color + '10');
+    chip.addEventListener('click', () => activateMetric(m.field));
+    el.appendChild(chip);
+  });
+  // hint if only one selected
+  if (activeFields.size === 1) {
+    const hint = document.createElement('span');
+    hint.style.cssText = 'font-size:11px;color:var(--muted);font-style:italic;';
+    hint.textContent = 'Click more metrics to overlay';
+    el.appendChild(hint);
+  }
 }
 
 // ─── STATIC MODE ────────────────────────────────────────────────────────────
@@ -585,20 +609,39 @@ function activateMetric(field) {
 
   stopLoop();
   clearMapPanel();
-  activeField = field;
+  activeField = null;
 
-  document.querySelectorAll('.metric-card').forEach(c => c.classList.remove('active'));
+  if (activeFields.has(field)) {
+    activeFields.delete(field);
+  } else {
+    activeFields.add(field);
+  }
+
   document.getElementById('card-map').classList.remove('active');
-  document.getElementById('card-' + field).classList.add('active');
+  METRICS.forEach(mx => {
+    document.getElementById('card-' + mx.field)
+      .classList.toggle('active', activeFields.has(mx.field));
+  });
 
-  const area = document.getElementById('mainArea');
-  area.innerHTML = '';
-  const pp = document.createElement('div');
-  pp.id = 'plotPanel';
-  pp.className = 'plot-panel';
-  area.appendChild(pp);
+  if (activeFields.size === 0) {
+    const area = document.getElementById('mainArea');
+    area.innerHTML = '<div class="plot-panel"><div class="plot-empty"><div class="plot-empty-hint">Select a metric above to view its plot, or open the Map view</div></div></div>';
+    return;
+  }
 
-  buildChartPanel(field);
+  let pp = document.getElementById('plotPanel');
+  const hasCanvas = pp && !!pp.querySelector('#plotCanvas');
+  if (!hasCanvas) {
+    const area = document.getElementById('mainArea');
+    area.innerHTML = '';
+    pp = document.createElement('div');
+    pp.id = 'plotPanel';
+    pp.className = 'plot-panel';
+    area.appendChild(pp);
+    buildChartPanel();
+  } else {
+    updateChartLegend();
+  }
   if (staticMode) { render(); } else { startLoop(); }
 }
 
@@ -616,58 +659,110 @@ function setWinHighlight(sec) {
 }
 
 // ─── CANVAS RENDERER ────────────────────────────────────────────────────────
-const PAD = { t:12, b:24, l:48, r:12 };
 
 function render() {
   const canvas = document.getElementById('plotCanvas');
-  if (!canvas || !activeField) return;
-  const m = METRICS.find(x => x.field === activeField);
+  if (!canvas) return;
+  // support both single-field (map compat) and multi-select
+  const fields = activeField ? [activeField] : Array.from(activeFields);
+  if (fields.length === 0) return;
+
+  const metrics = fields.map(f => METRICS.find(x => x.field === f)).filter(Boolean);
+  if (!metrics.length) return;
+
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.offsetWidth, H = canvas.offsetHeight;
   if (!W || !H) return;
   canvas.width = W * dpr; canvas.height = H * dpr;
   const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
 
-  // determine time window
+  // time window
   let tStart, tEnd, isStatic = staticMode && staticFrom && staticTo;
-  if (isStatic) {
-    tStart = staticFrom; tEnd = staticTo;
-  } else {
-    tEnd = Date.now(); tStart = tEnd - windowSec * 1000;
-  }
+  if (isStatic) { tStart = staticFrom; tEnd = staticTo; }
+  else          { tEnd = Date.now(); tStart = tEnd - windowSec * 1000; }
   const tSpan = tEnd - tStart || 1;
 
-  const pts = history[activeField].filter(d => d.t >= tStart && d.t <= tEnd);
-  const cX = PAD.l, cY = PAD.t, cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
-  let yMin = m.yMin, yMax = m.yMax;
-  if (pts.length > 1) {
-    const vs = pts.map(d => d.v), lo = Math.min(...vs), hi = Math.max(...vs), pad = (hi - lo) * .12 || .5;
-    yMin = Math.max(m.yMin, lo - pad); yMax = Math.min(m.yMax, hi + pad);
-    if (yMin >= yMax) { yMin = m.yMin; yMax = m.yMax; }
-  }
-  const yRange = yMax - yMin || 1;
+  // Left pad grows with number of series (each gets a Y-axis strip)
+  const Y_AXIS_W = 44;
+  const PAD_multi = {
+    t: 12,
+    b: 24,
+    l: Math.min(Y_AXIS_W * metrics.length, 140),
+    r: 12
+  };
+  const cX = PAD_multi.l, cY = PAD_multi.t;
+  const cW = W - PAD_multi.l - PAD_multi.r;
+  const cH = H - PAD_multi.t - PAD_multi.b;
+
+  const GRID  = '#ffffff0a';
+  const AXIS  = '#ffffff18';
+  const LABEL = '#7a8fa3';
+  const FONT  = '10px Poppins,sans-serif';
+  ctx.clearRect(0, 0, W, H);
+  ctx.font = FONT;
+
+  // compute per-series data and y-ranges
+  const seriesData = metrics.map(m => {
+    const pts = history[m.field].filter(d => d.t >= tStart && d.t <= tEnd);
+    let yMin = m.yMin, yMax = m.yMax;
+    if (pts.length > 1) {
+      const vs = pts.map(d => d.v), lo = Math.min(...vs), hi = Math.max(...vs);
+      const pad = (hi - lo) * .12 || .5;
+      const clo = Math.max(m.yMin, lo - pad), chi = Math.min(m.yMax, hi + pad);
+      if (clo < chi) { yMin = clo; yMax = chi; }
+    }
+    return { m, pts, yMin, yMax, yRange: (yMax - yMin) || 1 };
+  });
+
   const toX = t => cX + ((t - tStart) / tSpan) * cW;
-  const toY = v => cY + cH - ((v - yMin) / yRange) * cH;
-  const GRID = '#ffffff0a', AXIS = '#ffffff18', LABEL = '#7a8fa3', FONT = '10px Poppins,sans-serif';
-  ctx.clearRect(0, 0, W, H); ctx.font = FONT;
+
+  // Draw shared grid lines (5 horizontal) using first series scale
   for (let i = 0; i <= 5; i++) {
-    const v = yMin + (yRange / 5) * i, y = toY(v);
+    const y = cY + cH - (i / 5) * cH;
     ctx.strokeStyle = GRID; ctx.lineWidth = .5;
     ctx.beginPath(); ctx.moveTo(cX, y); ctx.lineTo(cX + cW, y); ctx.stroke();
-    ctx.fillStyle = LABEL; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    ctx.fillText(v.toFixed(m.decimals <= 1 ? 1 : 2), cX - 6, y);
   }
+
+  // Draw per-series Y-axis (stacked left)
+  seriesData.forEach((s, idx) => {
+    const axX = PAD_multi.l - Y_AXIS_W * (idx + 1);
+    const toY = v => cY + cH - ((v - s.yMin) / s.yRange) * cH;
+
+    ctx.font = FONT;
+    for (let i = 0; i <= 5; i++) {
+      const v = s.yMin + (s.yRange / 5) * i;
+      const y = toY(v);
+      ctx.fillStyle = s.m.color + 'cc';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(v.toFixed(s.m.decimals <= 1 ? 1 : 2), axX + Y_AXIS_W - 4, y);
+    }
+
+    // small colored tick on axis edge
+    ctx.strokeStyle = s.m.color + '60'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(axX + Y_AXIS_W, cY); ctx.lineTo(axX + Y_AXIS_W, cY + cH); ctx.stroke();
+
+    // unit label rotated
+    ctx.save();
+    ctx.font = '9px Poppins,sans-serif';
+    ctx.fillStyle = s.m.color + '99';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.translate(axX + 7, cY + cH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(s.m.unit, 0, 0);
+    ctx.restore();
+  });
+
+  // X-axis labels
   const xN = Math.max(2, Math.min(8, Math.floor(cW / 90)));
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.font = FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (let i = 0; i <= xN; i++) {
     const t = tStart + (i / xN) * tSpan, x = toX(t);
     let label;
     if (isStatic) {
       const d = new Date(t);
-      const hh = String(d.getHours()).padStart(2,'0');
-      const mm = String(d.getMinutes()).padStart(2,'0');
-      const ss = String(d.getSeconds()).padStart(2,'0');
-      label = `${hh}:${mm}:${ss}`;
+      label = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
     } else {
       const s = Math.round((tEnd - t) / 1000);
       label = s === 0 ? 'now' : `-${s}s`;
@@ -676,31 +771,60 @@ function render() {
     ctx.strokeStyle = AXIS; ctx.lineWidth = .5;
     ctx.beginPath(); ctx.moveTo(x, cY + cH); ctx.lineTo(x, cY + cH + 3); ctx.stroke();
   }
+
+  // Bottom axis line
   ctx.strokeStyle = AXIS; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(cX, cY + cH); ctx.lineTo(cX + cW, cY + cH); ctx.stroke();
-  if (pts.length < 2) {
-    ctx.fillStyle = LABEL; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '11px Poppins,sans-serif';
-    ctx.fillText(isStatic ? 'No data in selected range' : 'Waiting for data…', cX + cW / 2, cY + cH / 2); return;
-  }
-  ctx.save(); ctx.beginPath(); ctx.rect(cX, cY, cW, cH); ctx.clip();
-  if (yMin < 0 && yMax > 0) {
-    const z = toY(0); ctx.strokeStyle = m.color + '40'; ctx.lineWidth = 1; ctx.setLineDash([4, 5]);
-    ctx.beginPath(); ctx.moveTo(cX, z); ctx.lineTo(cX + cW, z); ctx.stroke(); ctx.setLineDash([]);
-  }
-  ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
-  pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
-  ctx.lineTo(toX(pts[pts.length-1].t), cY + cH); ctx.lineTo(toX(pts[0].t), cY + cH);
-  ctx.closePath(); ctx.fillStyle = m.color + '14'; ctx.fill();
-  ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
-  pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
-  ctx.strokeStyle = m.color; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
-  // dot: live shows latest point, static shows nothing extra
-  if (!isStatic) {
-    const lp = pts[pts.length-1];
-    ctx.beginPath(); ctx.arc(toX(lp.t), toY(lp.v), 3.5, 0, Math.PI*2);
-    ctx.fillStyle = m.color; ctx.fill(); ctx.strokeStyle = '#0d1b2a'; ctx.lineWidth = 1.5; ctx.stroke();
-  }
-  ctx.restore();
+
+  // Draw each series
+  seriesData.forEach(s => {
+    const { m, pts, yMin, yRange } = s;
+    const toY = v => cY + cH - ((v - yMin) / yRange) * cH;
+
+    if (pts.length < 2) {
+      if (seriesData.length === 1) {
+        ctx.fillStyle = LABEL; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = '11px Poppins,sans-serif';
+        ctx.fillText(isStatic ? 'No data in selected range' : 'Waiting for data…', cX + cW / 2, cY + cH / 2);
+      }
+      return;
+    }
+
+    ctx.save(); ctx.beginPath(); ctx.rect(cX, cY, cW, cH); ctx.clip();
+
+    // zero line if crosses zero
+    if (yMin < 0 && (yMin + yRange) > 0) {
+      const z = toY(0);
+      ctx.strokeStyle = m.color + '30'; ctx.lineWidth = 1; ctx.setLineDash([4, 5]);
+      ctx.beginPath(); ctx.moveTo(cX, z); ctx.lineTo(cX + cW, z); ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // fill under curve (subtle, each series stacked)
+    ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
+    pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
+    ctx.lineTo(toX(pts[pts.length-1].t), cY + cH); ctx.lineTo(toX(pts[0].t), cY + cH);
+    ctx.closePath();
+    // lower opacity fill when multiple series to avoid visual clutter
+    const fillOpacity = seriesData.length > 1 ? '08' : '14';
+    ctx.fillStyle = m.color + fillOpacity; ctx.fill();
+
+    // line
+    ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
+    pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
+    ctx.strokeStyle = m.color;
+    ctx.lineWidth = seriesData.length > 1 ? 1.5 : 1.5;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+
+    // live dot
+    if (!isStatic) {
+      const lp = pts[pts.length-1];
+      ctx.beginPath(); ctx.arc(toX(lp.t), toY(lp.v), 3.5, 0, Math.PI*2);
+      ctx.fillStyle = m.color; ctx.fill();
+      ctx.strokeStyle = '#0d1b2a'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+
+    ctx.restore();
+  });
 }
 
 function loop()      { render(); rafId = requestAnimationFrame(loop); }
@@ -730,6 +854,7 @@ function activateMap() {
   stopLoop();
   clearMapPanel();
   activeField = null;
+  activeFields.clear();
 
   document.querySelectorAll('.metric-card').forEach(c => c.classList.remove('active'));
   document.getElementById('card-map').classList.add('active');
@@ -1261,7 +1386,7 @@ function toggleCardStrip() {
 }
 
 setInterval(dummyTick, 500);
-window.addEventListener('resize', () => { if (activeField) render(); if (leafletMap) leafletMap.invalidateSize(); });
+window.addEventListener('resize', () => { if (activeField || activeFields.size > 0) render(); if (leafletMap) leafletMap.invalidateSize(); });
 
 </script>
 </body>
