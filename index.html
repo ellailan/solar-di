@@ -131,25 +131,23 @@ header { display:flex; align-items:center; gap:12px; padding:0 16px; height:36px
 .vital-value { font-size:15px; font-weight:700; color:var(--text); line-height:1; }
 .vital-unit { font-size:9px; color:var(--muted); }
 
-/* ── MAP BUTTON (sidebar) ── */
-.sidebar-map-btn {
-  display:flex; align-items:center; gap:8px;
-  padding:9px 12px 9px 12px;
-  cursor:pointer; user-select:none;
-  border-top:1px solid var(--border);
-  background:var(--navy2);
-  transition:background .12s;
-  flex-shrink:0;
+/* ── VIEW TOGGLE (Graph / Map) ── */
+.view-toggle {
+  display:flex; align-items:center; gap:0;
+  background:var(--navy3); border:1px solid var(--border2); border-radius:5px;
+  overflow:hidden; margin-left:4px; flex-shrink:0;
 }
-.sidebar-map-btn:hover { background:var(--navy3); }
-.sidebar-map-btn.active { background:rgba(96,165,250,0.12); }
-.sidebar-map-icon {
-  width:24px; height:24px; display:flex; align-items:center; justify-content:center;
-  background:rgba(96,165,250,0.12); border-radius:5px; border:1px solid rgba(96,165,250,0.2); flex-shrink:0;
+.view-toggle.hidden { display:none; }
+.view-btn {
+  display:flex; align-items:center; gap:5px;
+  background:transparent; border:none; color:var(--muted);
+  font-family:var(--font); font-size:11px; font-weight:600;
+  padding:4px 11px; cursor:pointer; letter-spacing:.03em;
+  transition:background .15s, color .15s; white-space:nowrap;
 }
-.sidebar-map-btn.active .sidebar-map-icon { background:rgba(96,165,250,0.22); border-color:rgba(96,165,250,0.5); }
-.sidebar-map-label { font-size:11px; font-weight:700; color:#60a5fa; letter-spacing:.06em; text-transform:uppercase; }
-.sidebar-map-sub { font-size:10px; color:var(--muted); margin-top:1px; }
+.view-btn + .view-btn { border-left:1px solid var(--border2); }
+.view-btn:hover:not(.on) { color:var(--text); background:rgba(255,255,255,.04); }
+.view-btn.on { background:var(--gold-bg); color:var(--gold); }
 
 /* ── SIDEBAR TOGGLE BUTTON ── */
 #sidebarToggle {
@@ -199,6 +197,40 @@ header { display:flex; align-items:center; gap:12px; padding:0 16px; height:36px
 .win-wrap { display:flex; align-items:center; gap:5px; }
 .win-num { width:58px; text-align:right; background:var(--navy3); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-family:var(--font); font-size:13px; padding:4px 8px; outline:none; }
 .win-num:focus { border-color:var(--gold); }
+
+/* ── SIGNAL DESCRIPTION BAR ── */
+.signal-desc-bar {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--navy);
+  padding: 0;
+  flex-shrink: 0;
+}
+.signal-desc-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 16px;
+  flex: 1 1 280px;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+}
+.signal-desc-item:last-child { border-right: none; }
+.signal-desc-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  position: relative; top: -1px;
+}
+.signal-desc-name {
+  font-size: 11px; font-weight: 700; white-space: nowrap; flex-shrink: 0; letter-spacing: .02em;
+}
+.signal-desc-sep {
+  font-size: 11px; color: var(--muted); flex-shrink: 0;
+}
+.signal-desc-text {
+  font-size: 11px; color: var(--muted); line-height: 1.4; min-width: 0;
+}
 
 /* canvas */
 .canvas-wrap { flex:1; position:relative; min-height:0; }
@@ -371,6 +403,17 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px
       <button class="top-tab active" id="tabData" onclick="switchTab('data')">Data</button>
       <button class="top-tab" id="tabCalc" onclick="switchTab('calc')">Calculations</button>
     </nav>
+    <!-- Graph / Map view toggle — only visible in Data tab -->
+    <div class="view-toggle" id="viewToggle">
+      <button class="view-btn on" id="viewBtnGraph" onclick="setDataView('graph')">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Graph
+      </button>
+      <button class="view-btn" id="viewBtnMap" onclick="setDataView('map')">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+        Map
+      </button>
+    </div>
     <div class="header-search">
       <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -387,19 +430,7 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px
 
         <div class="sidebar-scroll" id="sidebarScroll"></div>
 
-        <!-- Map view button -->
-        <div class="sidebar-map-btn" id="sidebarMapBtn" onclick="activateMap()">
-          <div class="sidebar-map-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-              <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
-            </svg>
-          </div>
-          <div>
-            <div class="sidebar-map-label">Map View</div>
-            <div class="sidebar-map-sub" id="mapGpsSub">GPS Track</div>
-          </div>
-        </div>
+        <!-- (map toggle moved to header) -->
 
 
 
@@ -594,7 +625,6 @@ function activateSignal(field, multiSelect) {
   stopLoop();
   clearMapPanel();
   activeField = null;
-  document.getElementById('sidebarMapBtn').classList.remove('active');
 
   if (multiSelect) {
     if (activeFields.has(field)) activeFields.delete(field);
@@ -678,6 +708,7 @@ function buildChartPanel() {
 
       <span class="static-badge ${staticMode?'':'hidden'}" id="staticBadge">FROZEN</span>
     </div>
+    <div id="signalDescBar" class="signal-desc-bar"></div>
     <div class="canvas-wrap"><canvas id="plotCanvas"></canvas></div>
   `;
   const winNumEl = document.getElementById('winNum');
@@ -689,6 +720,7 @@ function buildChartPanel() {
   dtInit('dtFrom', null); dtInit('dtTo', null);
   prefillStaticInputs();
   updateChartLegend();
+  updateSignalDesc();
 }
 
 function updateChartLegend() {
@@ -711,9 +743,24 @@ function updateChartLegend() {
     hint.textContent = activeFields.size === 1 ? 'Ctrl+click to overlay up to 2 more signals' : 'Ctrl+click to overlay 1 more signal';
     el.appendChild(hint);
   }
+  updateSignalDesc();
 }
 
-// ─── STATIC MODE ─────────────────────────────────────────────────────────────
+function updateSignalDesc() {
+  const bar = document.getElementById('signalDescBar');
+  if (!bar) return;
+  const active = SIGNALS.filter(m => activeFields.has(m.field));
+  if (active.length === 0) { bar.innerHTML = ''; bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = active.map(m => `
+    <div class="signal-desc-item">
+      <span class="signal-desc-dot" style="background:${m.color}"></span>
+      <span class="signal-desc-name" style="color:${m.color}">${m.label}</span>
+      <span class="signal-desc-sep">—</span>
+      <span class="signal-desc-text">${m.help}</span>
+    </div>
+  `).join('');
+}
 let staticMode = false, staticFrom = null, staticTo = null;
 
 function prefillStaticInputs() {
@@ -893,7 +940,6 @@ function activateMap() {
   stopLoop(); clearMapPanel();
   activeField = null; activeFields.clear();
   SIGNALS.forEach(s => { const r = document.getElementById('sigrow-' + s.field); if(r) r.classList.remove('active'); });
-  document.getElementById('sidebarMapBtn').classList.add('active');
 
   const area = document.getElementById('mainArea');
   area.innerHTML = '';
@@ -1403,6 +1449,42 @@ function dtGet(id) {
   return new Date(st.y,st.mo-1,st.d,st.h,st.mi,st.s,0).getTime();
 }
 
+// ─── DATA VIEW (Graph vs Map) ─────────────────────────────────────────────────
+let currentDataView = 'graph';
+
+function setDataView(view) {
+  currentDataView = view;
+  document.getElementById('viewBtnGraph').classList.toggle('on', view === 'graph');
+  document.getElementById('viewBtnMap').classList.toggle('on', view === 'map');
+
+  if (view === 'map') {
+    // Hide sidebar
+    document.getElementById('sidebar').classList.add('hidden');
+    document.getElementById('sidebarToggle').classList.add('hidden');
+    activateMap();
+  } else {
+    // Show sidebar, restore graph
+    document.getElementById('sidebar').classList.remove('hidden');
+    document.getElementById('sidebarToggle').classList.remove('hidden');
+    // Clear map
+    stopReplay();
+    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+    mapPolylines = []; replayMarker = null; mapFitted = false;
+    // Restore graph panel
+    const area = document.getElementById('mainArea');
+    if (activeFields.size > 0) {
+      area.innerHTML = '';
+      const pp = document.createElement('div');
+      pp.id = 'plotPanel'; pp.className = 'plot-panel';
+      area.appendChild(pp);
+      buildChartPanel();
+      if (staticMode) render(); else startLoop();
+    } else {
+      area.innerHTML = '<div class="plot-panel"><div class="plot-empty"><div class="plot-empty-hint">Select a signal from the sidebar to view its plot</div><div class="plot-empty-sub">Hold Ctrl / ⌘ to overlay up to 3 signals</div></div></div>';
+    }
+  }
+}
+
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
 let activeTab = 'data';
 
@@ -1410,12 +1492,16 @@ function switchTab(tab) {
   activeTab = tab;
   document.getElementById('tabData').classList.toggle('active', tab==='data');
   document.getElementById('tabCalc').classList.toggle('active', tab==='calc');
+  document.getElementById('viewToggle').classList.toggle('hidden', tab!=='data');
 
   if (tab === 'data') {
     document.getElementById('dataTab').classList.remove('hidden');
     document.getElementById('calcTab').classList.remove('active');
-    document.getElementById('sidebar').classList.remove('hidden');
-    document.getElementById('sidebarToggle').classList.remove('hidden');
+    // Restore sidebar only in graph view
+    if (currentDataView === 'graph') {
+      document.getElementById('sidebar').classList.remove('hidden');
+      document.getElementById('sidebarToggle').classList.remove('hidden');
+    }
     if (activeFields.size > 0 && !staticMode) startLoop();
     if (leafletMap) leafletMap.invalidateSize();
   } else {
