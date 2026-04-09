@@ -14,6 +14,7 @@
   --navy:     #0d1b2a;
   --navy2:    #162232;
   --navy3:    #1e2e40;
+  --navy4:    #253548;
   --gold:     #c9a84c;
   --gold-dim: #8a6e2e;
   --gold-bg:  #c9a84c18;
@@ -24,207 +25,169 @@
   --green:    #4caf7d;
   --red:      #e05c4a;
   --font:     'Poppins', sans-serif;
+  --sidebar-w: 240px;
 }
 
 html, body { height:100%; background:var(--navy); color:var(--text); font-family:var(--font); font-size:14px; overflow:hidden; }
 
 .shell { display:flex; flex-direction:column; height:100vh; }
-#dataTab { display:contents; }
-#calcTab { display:none; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
-#calcTab.active { display:flex; }
-#mainArea { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
-#mainArea > .plot-panel, #mainArea > .map-panel { flex:1; min-height:0; }
 
 /* ── HEADER ── */
-header { display:flex; align-items:center; gap:12px; padding:0 20px; height:36px; background:var(--navy2); border-bottom:1px solid var(--border); }
+header { display:flex; align-items:center; gap:12px; padding:0 16px; height:36px; background:var(--navy2); border-bottom:1px solid var(--border); flex-shrink:0; z-index:10; }
 .logo { font-size:14px; font-weight:700; color:var(--gold); white-space:nowrap; letter-spacing:.01em; }
 .logo span { color:var(--text); font-weight:500; }
 
 /* ── TOP TABS ── */
-.top-tabs { display:flex; align-items:stretch; gap:0; margin-left:16px; height:100%; }
+.top-tabs { display:flex; align-items:stretch; gap:0; margin-left:12px; height:100%; }
 .top-tab {
   background:transparent; border:none; border-bottom:2px solid transparent;
   color:var(--muted); font-family:var(--font); font-size:12px; font-weight:600;
-  padding:0 16px; cursor:pointer; letter-spacing:.04em; text-transform:uppercase;
+  padding:0 14px; cursor:pointer; letter-spacing:.04em; text-transform:uppercase;
   transition:color .15s, border-color .15s;
 }
 .top-tab:hover { color:var(--text); }
 .top-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
 
-/* ── CARD STRIP ── */
-.card-strip-wrapper {
-  flex-shrink:0; background:var(--navy2);
-  border-bottom:1px solid var(--border);
+/* ── SEARCH ── */
+.header-search {
+  margin-left:auto; position:relative; display:flex; align-items:center;
 }
-.card-strip-header {
-  display:flex; align-items:center; justify-content:center;
+.header-search input {
+  background:var(--navy3); border:1px solid var(--border2); border-radius:5px;
+  color:var(--text); font-family:var(--font); font-size:12px;
+  padding:4px 8px 4px 28px; width:180px; outline:none;
+  transition:border-color .15s, width .2s;
+}
+.header-search input:focus { border-color:var(--gold); width:220px; }
+.header-search input::placeholder { color:var(--muted); }
+.search-icon { position:absolute; left:8px; color:var(--muted); pointer-events:none; }
+
+/* ── BODY LAYOUT ── */
+.body-layout { display:flex; flex:1; min-height:0; overflow:hidden; position:relative; }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  width:var(--sidebar-w); flex-shrink:0;
+  background:var(--navy2); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; overflow:hidden;
+  transition:width .25s cubic-bezier(.4,0,.2,1);
+}
+#sidebar.collapsed { width:0; border-right:none; }
+#sidebar.hidden { display:none; }
+
+.sidebar-inner { width:var(--sidebar-w); display:flex; flex-direction:column; height:100%; overflow:hidden; }
+
+.sidebar-scroll { flex:1; overflow-y:auto; overflow-x:hidden; }
+.sidebar-scroll::-webkit-scrollbar { width:4px; }
+.sidebar-scroll::-webkit-scrollbar-track { background:transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+/* ── STAGE GROUPS ── */
+.stage-group { border-bottom:1px solid var(--border); }
+.stage-header {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 12px 8px 10px;
+  cursor:pointer; user-select:none;
+  transition:background .12s;
+  position:sticky; top:0; z-index:1;
   background:var(--navy2);
+}
+.stage-header:hover { background:var(--navy3); }
+.stage-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.stage-name { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); flex:1; }
+.stage-count { font-size:10px; color:var(--muted); background:var(--navy3); border-radius:8px; padding:1px 6px; flex-shrink:0; }
+.stage-chevron { color:var(--muted); transition:transform .2s; flex-shrink:0; }
+.stage-group.open .stage-chevron { transform:rotate(90deg); }
+.stage-signals { display:none; }
+.stage-group.open .stage-signals { display:block; }
+
+/* ── SIGNAL ROWS ── */
+.signal-row {
+  display:flex; align-items:center; gap:0;
+  padding:6px 12px 6px 25px;
+  cursor:pointer; position:relative;
+  transition:background .1s;
+  border-left:2px solid transparent;
+}
+.signal-row:hover { background:var(--navy3); }
+.signal-row.active { background:var(--navy3); border-left-color:var(--stage-color,var(--gold)); }
+.signal-row.active .sig-name { color:var(--stage-color,var(--gold)); }
+.signal-row.hidden-search { display:none; }
+
+.sig-name { font-size:12px; font-weight:500; color:var(--text); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sig-value { font-size:11px; font-weight:600; color:var(--stage-color,var(--muted)); white-space:nowrap; margin-left:6px; min-width:44px; text-align:right; }
+.sig-unit { font-size:10px; color:var(--muted); margin-left:2px; }
+.sig-badge { font-size:9px; font-weight:700; letter-spacing:.03em; color:var(--muted); background:var(--navy4); border-radius:3px; padding:1px 4px; margin-left:4px; flex-shrink:0; }
+
+/* ── VITALS STRIP (always-on bar at sidebar bottom) ── */
+.vitals-strip {
+  flex-shrink:0; border-top:1px solid var(--border);
+  background:var(--navy); padding:8px 10px 6px;
+}
+.vitals-title { font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--gold-dim); margin-bottom:6px; }
+.vitals-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.vital-cell { background:var(--navy2); border-radius:4px; padding:5px 8px; }
+.vital-label { font-size:9px; color:var(--muted); font-weight:500; margin-bottom:2px; }
+.vital-value { font-size:15px; font-weight:700; color:var(--text); line-height:1; }
+.vital-unit { font-size:9px; color:var(--muted); }
+
+/* ── MAP BUTTON (sidebar) ── */
+.sidebar-map-btn {
+  display:flex; align-items:center; gap:8px;
+  padding:9px 12px 9px 12px;
+  cursor:pointer; user-select:none;
   border-top:1px solid var(--border);
-  padding:2px 0;
+  background:var(--navy2);
+  transition:background .12s;
+  flex-shrink:0;
 }
-.card-strip-toggle {
-  display:flex; align-items:center; gap:5px;
-  background:transparent; border:none;
-  color:var(--muted); font-family:var(--font); font-size:11px; font-weight:600;
-  padding:3px 12px; cursor:pointer; user-select:none;
-  transition:color .15s;
-  letter-spacing:.03em;
+.sidebar-map-btn:hover { background:var(--navy3); }
+.sidebar-map-btn.active { background:rgba(96,165,250,0.12); }
+.sidebar-map-icon {
+  width:24px; height:24px; display:flex; align-items:center; justify-content:center;
+  background:rgba(96,165,250,0.12); border-radius:5px; border:1px solid rgba(96,165,250,0.2); flex-shrink:0;
 }
-.card-strip-toggle:hover { color:var(--gold); }
-.card-strip-toggle svg { transition:transform .25s ease; flex-shrink:0; }
-.card-strip-wrapper.collapsed .card-strip-toggle svg { transform:rotate(180deg); }
-.card-strip {
-  display:flex; flex-wrap:wrap;
-  overflow:hidden;
-  transition:max-height .3s cubic-bezier(.4,0,.2,1), opacity .25s ease;
-  max-height:200px; opacity:1;
+.sidebar-map-btn.active .sidebar-map-icon { background:rgba(96,165,250,0.22); border-color:rgba(96,165,250,0.5); }
+.sidebar-map-label { font-size:11px; font-weight:700; color:#60a5fa; letter-spacing:.06em; text-transform:uppercase; }
+.sidebar-map-sub { font-size:10px; color:var(--muted); margin-top:1px; }
+
+/* ── SIDEBAR TOGGLE BUTTON ── */
+#sidebarToggle {
+  position:absolute; left:calc(var(--sidebar-w) - 1px); top:50%; transform:translateY(-50%);
+  width:16px; height:40px; display:flex; align-items:center; justify-content:center;
+  background:var(--navy3); border:1px solid var(--border2); border-left:none;
+  border-radius:0 4px 4px 0; cursor:pointer; z-index:20; transition:left .25s;
+  color:var(--muted); flex-shrink:0;
 }
-.card-strip-wrapper.collapsed .card-strip {
-  max-height:0; opacity:0;
+#sidebarToggle:hover { color:var(--text); background:var(--navy4); }
+#sidebarToggle.hidden { display:none; }
+.sidebar-collapsed #sidebarToggle { left:0; }
+
+/* ── MAIN CONTENT ── */
+#mainContent {
+  flex:1; min-width:0; min-height:0; display:flex; flex-direction:column;
 }
 
-.metric-card {
-  flex:1 1 140px; padding:11px 16px 10px;
-  border-right:1px solid var(--border); border-bottom:1px solid var(--border);
-  cursor:pointer; position:relative; user-select:none; transition:background .15s;
-}
-
-/* on wide screens: single row, no wrapping, no bottom borders on cards */
-@media (min-width:960px) {
-  .card-strip { flex-wrap:nowrap; }
-  .metric-card { border-bottom:none; flex:1 0 140px; }
-  .map-card-separator { display:flex !important; }
-}
-.metric-card:hover, .metric-card.active { background:var(--navy3); }
-
-.metric-card::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:2px;
-  background:var(--card-color,var(--gold)); opacity:.3; transition:opacity .2s;
-}
-.metric-card:hover::before, .metric-card.active::before { opacity:.9; }
-.metric-card::after {
-  content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px;
-  background:var(--card-color,var(--gold)); transform:scaleX(0); transition:transform .2s ease;
-}
-.metric-card.active::after { transform:scaleX(1); }
-
-.mc-label { font-size:12px; font-weight:500; color:var(--muted); letter-spacing:.02em; margin-bottom:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.mc-value-row { display:flex; align-items:baseline; gap:5px; }
-.mc-value { font-size:32px; font-weight:700; line-height:1; color:var(--card-color,var(--text)); white-space:nowrap; transition:color .3s; }
-.mc-value.no-data { font-size:22px; color:var(--muted); font-weight:400; }
-.mc-unit { font-size:13px; color:var(--muted); font-weight:400; }
-.mc-bar-track { height:2px; background:var(--border); border-radius:1px; margin-top:9px; overflow:hidden; }
-.mc-bar-fill { height:100%; border-radius:1px; background:var(--card-color,var(--gold)); transition:width .8s cubic-bezier(.4,0,.2,1); opacity:.5; }
-.mc-delta { font-size:12px; font-weight:500; margin-top:5px; color:var(--muted); transition:color .4s; }
-.delta-up { color:var(--green); } .delta-dn { color:var(--red); }
-
-/* ── RESPONSIVE METRIC VALUE SCALING ── */
-@media (max-width:600px) {
-  .mc-value { font-size:22px !important; }
-  .mc-value.no-data { font-size:16px !important; }
-  .metric-card { flex:1 1 120px; padding:9px 12px 8px; }
-}
-
-/* map card special */
-.map-card .mc-value { font-size:18px; font-weight:600; }
-
-/* ── MAP CARD BUTTON ── */
-.map-card-separator {
-  /* vertical on wide screens, horizontal on small */
-  width:1px; background:var(--border2); flex-shrink:0; align-self:stretch; margin:8px 0;
-}
-
-/* on small screens: separator becomes a horizontal rule spanning full width */
-@media (max-width:959px) {
-  .map-card-separator {
-    width:100%; height:1px; margin:0; align-self:auto;
-  }
-  .map-card-btn {
-    flex-direction:row !important;
-    width:100%; min-width:unset !important;
-    padding:10px 20px !important;
-    gap:12px !important;
-    justify-content:flex-start !important;
-    border-left:none !important;
-    border-top:2px solid rgba(96,165,250,0.35) !important;
-  }
-  .map-card-btn:hover { border-top-color:rgba(96,165,250,0.75) !important; }
-  .map-card-btn.active { border-top-color:#60a5fa !important; }
-  .map-card-btn::before { left:0; right:0; top:0; height:2px; width:auto; }
-  .map-card-btn::after { bottom:-1px; left:0; right:0; height:2px; top:auto; width:auto; transform:scaleX(0); }
-  .map-card-btn.active::after { transform:scaleX(1); }
-  .map-card-icon { flex-shrink:0; }
-  .map-card-label { font-size:12px; }
-  .map-card-sub { display:none; }
-}
-
-.map-card-btn {
-  flex:0 0 auto;
-  min-width:110px;
-  padding:0 20px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  cursor:pointer;
-  user-select:none;
-  position:relative;
-  border:none;
-  background:linear-gradient(135deg, rgba(96,165,250,0.10) 0%, rgba(96,165,250,0.04) 100%);
-  border-left:2px solid rgba(96,165,250,0.35);
-  transition:background .18s, border-color .18s;
-}
-.map-card-btn:hover {
-  background:linear-gradient(135deg, rgba(96,165,250,0.20) 0%, rgba(96,165,250,0.10) 100%);
-  border-left-color:rgba(96,165,250,0.75);
-}
-.map-card-btn.active {
-  background:linear-gradient(135deg, rgba(96,165,250,0.25) 0%, rgba(96,165,250,0.12) 100%);
-  border-left-color:#60a5fa;
-}
-.map-card-btn::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:2px;
-  background:#60a5fa; opacity:.25; transition:opacity .2s;
-}
-.map-card-btn:hover::before, .map-card-btn.active::before { opacity:.85; }
-.map-card-btn::after {
-  content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px;
-  background:#60a5fa; transform:scaleX(0); transition:transform .2s ease;
-}
-.map-card-btn.active::after { transform:scaleX(1); }
-.map-card-icon {
-  width:32px; height:32px; display:flex; align-items:center; justify-content:center;
-  background:rgba(96,165,250,0.12); border-radius:8px;
-  border:1px solid rgba(96,165,250,0.25);
-  transition:background .18s, border-color .18s;
-}
-.map-card-btn:hover .map-card-icon, .map-card-btn.active .map-card-icon {
-  background:rgba(96,165,250,0.22);
-  border-color:rgba(96,165,250,0.55);
-}
-.map-card-label {
-  font-size:11px; font-weight:600; color:#60a5fa;
-  letter-spacing:.08em; text-transform:uppercase; line-height:1;
-}
-.map-card-sub {
-  font-size:10px; color:var(--muted); font-weight:400; letter-spacing:.02em;
-  transition:color .2s;
-}
-.map-card-btn:hover .map-card-sub, .map-card-btn.active .map-card-sub { color:#9cc9fc; }
+/* tabs for calc */
+#dataTab { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
+#dataTab.hidden { display:none; }
+#calcTab { display:none; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
+#calcTab.active { display:flex; }
+#mainArea { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
 
 /* ── PANEL ── */
-.plot-panel { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
-.plot-empty { flex:1; display:flex; align-items:center; justify-content:center; }
-.plot-empty-hint { font-size:14px; font-weight:500; color:var(--muted); }
+.plot-panel { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
+.plot-empty { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; }
+.plot-empty-hint { font-size:14px; font-weight:500; color:var(--muted); text-align:center; }
+.plot-empty-sub { font-size:11px; color:var(--gold-dim); }
 
 /* shared toolbar */
 .plot-toolbar {
-  display:flex; align-items:center; gap:14px; padding:10px 20px;
+  display:flex; align-items:center; gap:14px; padding:8px 16px;
   border-bottom:1px solid var(--border); background:var(--navy2);
   flex-shrink:0; flex-wrap:wrap;
 }
-.plot-name { font-size:16px; font-weight:700; color:var(--card-color,var(--text)); }
+.plot-name { font-size:15px; font-weight:700; color:var(--card-color,var(--text)); }
 .plot-unit-badge { font-size:12px; font-weight:500; color:var(--muted); border:1px solid var(--border2); border-radius:4px; padding:2px 8px; }
 .plot-help { font-size:12px; color:var(--muted); line-height:1.5; border-left:2px solid var(--gold-dim); padding-left:10px; max-width:340px; flex:1; }
 
@@ -294,8 +257,6 @@ header { display:flex; align-items:center; gap:12px; padding:0 20px; height:36px
 .dt-sep { font-size:13px; color:var(--muted); line-height:1; padding:0 1px; pointer-events:none; flex-shrink:0; }
 .dt-sep-space { width:7px; flex-shrink:0; }
 
-.ts-label { font-size:11px; font-weight:500; color:var(--muted); white-space:nowrap; }
-
 .static-badge {
   font-size:10px; font-weight:600; color:var(--gold); background:var(--gold-bg);
   border:1px solid var(--gold-dim); border-radius:3px; padding:2px 7px;
@@ -304,29 +265,21 @@ header { display:flex; align-items:center; gap:12px; padding:0 20px; height:36px
 .static-badge.hidden { display:none; }
 
 /* ── MAP PANEL ── */
-.map-panel { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
-
+.map-panel { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
 .map-toolbar {
   display:flex; flex-direction:column;
   border-bottom:1px solid var(--border); background:var(--navy2);
   flex-shrink:0;
 }
-
-/* Row 1: title + color-by + legend */
 .map-toolbar-row1 {
   display:flex; align-items:center; flex-wrap:wrap; gap:10px;
-  padding:9px 16px 8px;
-  border-bottom:1px solid var(--border);
+  padding:9px 16px 8px; border-bottom:1px solid var(--border);
 }
 .map-toolbar-row1 .plot-name { flex-shrink:0; margin-right:4px; }
-
-/* Row 2: scrubbers + replay + speed */
 .map-toolbar-row2 {
   display:flex; align-items:center; flex-wrap:wrap; gap:10px;
   padding:8px 16px;
 }
-
-/* metric color picker */
 .color-by { display:flex; align-items:center; gap:7px; flex-shrink:0; }
 .color-by-label { font-size:12px; font-weight:500; color:var(--muted); white-space:nowrap; }
 .color-by select {
@@ -335,17 +288,11 @@ header { display:flex; align-items:center; gap:12px; padding:0 20px; height:36px
   outline:none; cursor:pointer;
 }
 .color-by select:focus { border-color:var(--gold); }
-
-/* scrubber — each one is its own flex row so it can wrap independently */
 .scrubber-wrap {
-  display:flex; align-items:center; gap:7px;
-  flex:1 1 260px; min-width:0;
+  display:flex; align-items:center; gap:7px; flex:1 1 260px; min-width:0;
 }
 .scrubber-label { font-size:12px; font-weight:500; color:var(--muted); white-space:nowrap; flex-shrink:0; }
-input[type=range] {
-  flex:1; min-width:80px; accent-color:var(--gold); height:3px; cursor:pointer;
-}
-/* replay */
+input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px; cursor:pointer; }
 .replay-btn {
   background:transparent; border:1px solid var(--border2); border-radius:4px;
   color:var(--muted); font-family:var(--font); font-size:12px; font-weight:500;
@@ -354,28 +301,16 @@ input[type=range] {
 }
 .replay-btn:hover { color:var(--text); border-color:var(--gold); }
 .replay-btn.playing { color:var(--gold); border-color:var(--gold-dim); background:var(--gold-bg); }
-
-/* speed */
 .speed-wrap { display:flex; align-items:center; gap:6px; flex-shrink:0; }
 .speed-label { font-size:12px; color:var(--muted); }
 .speed-select { background:var(--navy3); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-family:var(--font); font-size:12px; padding:3px 8px; outline:none; }
-
-/* legend */
 .map-legend { display:flex; align-items:center; gap:8px; flex-shrink:0; }
-.legend-grad {
-  width:80px; height:6px; border-radius:3px;
-  background:linear-gradient(to right,#4caf7d,#c9a84c,#e05c4a);
-}
+.legend-grad { width:80px; height:6px; border-radius:3px; background:linear-gradient(to right,#4caf7d,#c9a84c,#e05c4a); }
 .legend-lo, .legend-hi { font-size:11px; color:var(--muted); }
-
-/* leaflet container */
 .map-wrap { flex:1; position:relative; min-height:0; }
 #leafletMap { position:absolute; inset:0; }
-/* navy tint sits over tiles but under Leaflet SVG pane (z-index 200) */
-
 
 /* ── CALCULATIONS TAB ── */
-#dataTab { display:contents; }
 .calc-toolbar {
   display:flex; align-items:center; gap:8px; flex-wrap:wrap;
   padding:9px 20px; background:var(--navy2);
@@ -383,12 +318,9 @@ input[type=range] {
 }
 .calc-toolbar-label { font-size:11px; font-weight:700; color:var(--gold); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
 .calc-body {
-  flex:1; overflow-y:auto; padding:20px 20px 32px;
-  background:var(--navy);
+  flex:1; overflow-y:auto; padding:20px 20px 32px; background:var(--navy);
 }
 .calc-empty { height:100%; display:flex; align-items:center; justify-content:center; }
-
-/* summary stat cards */
 .calc-section-title {
   font-size:11px; font-weight:700; color:var(--gold);
   letter-spacing:.08em; text-transform:uppercase;
@@ -406,8 +338,6 @@ input[type=range] {
 .stat-card-label { font-size:11px; font-weight:500; color:var(--muted); margin-bottom:5px; }
 .stat-card-value { font-size:22px; font-weight:700; color:var(--card-color,var(--text)); line-height:1.1; }
 .stat-card-unit { font-size:12px; font-weight:400; color:var(--muted); margin-left:3px; }
-
-/* mini charts */
 .mini-charts-grid {
   display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; margin-bottom:8px;
 }
@@ -422,15 +352,10 @@ input[type=range] {
 .mini-chart-title .dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
 .mini-chart-canvas { display:block; width:100%; height:120px; }
 
-/* dark-mode tile filter */
-.leaflet-layer,
-.leaflet-control-zoom-in,
-.leaflet-control-zoom-out,
-.leaflet-control-attribution {
+/* dark-mode leaflet */
+.leaflet-layer,.leaflet-control-zoom-in,.leaflet-control-zoom-out,.leaflet-control-attribution {
   filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
-
-/* override leaflet chrome to fit theme */
 .leaflet-control-attribution { background:rgba(13,27,42,.75) !important; color:var(--muted) !important; font-size:9px !important; }
 .leaflet-control-attribution a { color:var(--muted) !important; }
 .leaflet-bar a { background:var(--navy2) !important; color:var(--text) !important; border-color:var(--border2) !important; }
@@ -446,150 +371,283 @@ input[type=range] {
       <button class="top-tab active" id="tabData" onclick="switchTab('data')">Data</button>
       <button class="top-tab" id="tabCalc" onclick="switchTab('calc')">Calculations</button>
     </nav>
+    <div class="header-search">
+      <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" placeholder="Search signals…" id="signalSearch" oninput="filterSignals(this.value)">
+    </div>
   </header>
 
-  <div id="dataTab">
-  <div class="card-strip-wrapper" id="cardStripWrapper">
-    <div class="card-strip" id="cardStrip"></div>
-    <div class="card-strip-header">
-      <button class="card-strip-toggle" id="cardStripToggle" onclick="toggleCardStrip()">
-        <span id="cardStripToggleLabel">Hide Metrics</span>
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="2 8 6 4 10 8"/>
-        </svg>
-      </button>
-    </div>
-  </div>
+  <div class="body-layout" id="bodyLayout">
 
-  <div id="mainArea">
-    <div class="plot-panel" id="plotPanel">
-      <div class="plot-empty">
-        <div class="plot-empty-hint">Select a metric above to view its plot, or open the Map view</div>
+    <!-- ── SIDEBAR ── -->
+    <div id="sidebar">
+      <div class="sidebar-inner">
+
+        <div class="sidebar-scroll" id="sidebarScroll"></div>
+
+        <!-- Map view button -->
+        <div class="sidebar-map-btn" id="sidebarMapBtn" onclick="activateMap()">
+          <div class="sidebar-map-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+              <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
+            </svg>
+          </div>
+          <div>
+            <div class="sidebar-map-label">Map View</div>
+            <div class="sidebar-map-sub" id="mapGpsSub">GPS Track</div>
+          </div>
+        </div>
+
+
+
       </div>
     </div>
-  </div>
-  </div><!-- /#dataTab -->
 
-  <!-- ── CALCULATIONS TAB ── -->
-  <div id="calcTab" >
-    <div class="calc-toolbar">
-      <span class="calc-toolbar-label">Time Range</span>
-      <span class="ts-label">From</span>
-      <span id="dtCalcFrom" class="dt-picker"></span>
-      <span class="ts-label">To</span>
-      <span id="dtCalcTo" class="dt-picker"></span>
-      <button class="ts-apply" onclick="runCalculations()">Analyse</button>
-      <span id="calcStatus" class="static-badge hidden"></span>
+    <!-- Sidebar toggle (sibling of sidebar so it tracks the sidebar edge) -->
+    <div id="sidebarToggle" onclick="toggleSidebar()">
+      <svg id="sidebarToggleIcon" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <polyline points="6 2 3 5 6 8"/>
+      </svg>
     </div>
-    <div id="calcBody" class="calc-body">
-      <div class="calc-empty">
-        <div class="plot-empty-hint">Set a time range and click Analyse to see aggregate statistics</div>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div id="mainContent">
+
+      <!-- Data tab -->
+      <div id="dataTab">
+        <div id="mainArea">
+          <div class="plot-panel" id="plotPanel">
+            <div class="plot-empty">
+              <div class="plot-empty-hint">Select a signal from the sidebar to view its plot</div>
+              <div class="plot-empty-sub">Hold Ctrl / ⌘ to overlay up to 3 signals</div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-</div>
+      <!-- Calculations tab -->
+      <div id="calcTab">
+        <div class="calc-toolbar">
+          <span class="calc-toolbar-label">Time Range</span>
+          <span class="ts-label">From</span>
+          <span id="dtCalcFrom" class="dt-picker"></span>
+          <span class="ts-label">To</span>
+          <span id="dtCalcTo" class="dt-picker"></span>
+          <button class="ts-apply" onclick="runCalculations()">Analyse</button>
+          <span id="calcStatus" class="static-badge hidden"></span>
+        </div>
+        <div id="calcBody" class="calc-body">
+          <div class="calc-empty">
+            <div class="plot-empty-hint">Set a time range and click Analyse to see aggregate statistics</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /#mainContent -->
+  </div><!-- /.body-layout -->
+</div><!-- /.shell -->
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 if (typeof L === 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    document.body.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0d1b2a;font-family:Poppins,sans-serif;color:#f0f4f8;flex-direction:column;gap:16px;padding:32px;text-align:center">
-        <div style="font-size:18px;font-weight:700;color:#e05c4a">Leaflet failed to load</div>
-        <div style="font-size:13px;color:#7a8fa3;max-width:400px;line-height:1.7">
-          This page needs an internet connection to load the Leaflet map library from <code style="color:#c9a84c">unpkg.com</code>.<br><br>
-          Serve the file via a local web server rather than opening it directly from disk, or ensure <code style="color:#c9a84c">unpkg.com</code> is reachable.
-        </div>
-        <div style="font-size:11px;color:#7a8fa3;border:1px solid #ffffff20;border-radius:6px;padding:10px 20px;">
-          <code>python3 -m http.server 8080</code> &rarr; open <code>localhost:8080</code>
-        </div>
-      </div>`;
-  });
-  throw new Error('Leaflet (L) is not defined — CDN script failed to load.');
+  document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0d1b2a;font-family:Poppins,sans-serif;color:#f0f4f8;flex-direction:column;gap:16px;padding:32px;text-align:center"><div style="font-size:18px;font-weight:700;color:#e05c4a">Leaflet failed to load</div><div style="font-size:13px;color:#7a8fa3;max-width:400px;line-height:1.7">This page needs an internet connection to load Leaflet from <code style="color:#c9a84c">unpkg.com</code>.</div></div>`;
+  throw new Error('Leaflet not loaded');
 }
-// ─── METRICS ───────────────────────────────────────────────────────────────
-const METRICS = [
-  { field:'motor_power',    label:'Motor Power',    unit:'kW',   color:'#e05c4a', transform:v=>v/1000, decimals:2, yMin:0,   yMax:5,
-    help:'Electrical power drawn by the motor controller. High values indicate acceleration or hill climbing.' },
-  { field:'array_power',    label:'Array Power',    unit:'kW',   color:'#f0a500', transform:v=>v/1000, decimals:2, yMin:0,   yMax:3,
-    help:'Solar panel output. Peaks in direct sunlight; drops in shade or cloud cover.' },
-  { field:'battery_soc',    label:'Battery SOC',    unit:'%',    color:'#4caf7d', decimals:1, yMin:0,   yMax:100,
-    help:'State of charge of the battery pack. A steady decline indicates net energy consumption.' },
-  { field:'speed',          label:'Speed',          unit:'km/h', color:'#60a5fa', decimals:1, yMin:0,   yMax:100,
-    help:'Vehicle speed. Compare with motor power to spot inefficient phases.' },
-  { field:'steering_angle', label:'Steering Angle', unit:'°',    color:'#f472b6', decimals:1, yMin:-45, yMax:45,
-    help:'Steering wheel deflection. Large sustained angles increase rolling resistance.' },
-  { field:'acceleration',   label:'Acceleration',   unit:'g',    color:'#a78bfa', decimals:2, yMin:-1,  yMax:1,
-    help:'Longitudinal acceleration. Smooth profiles minimise energy loss.' },
+
+// ─── SIGNAL DEFINITIONS ──────────────────────────────────────────────────────
+// Stages with color identities
+const STAGES = [
+  { id:'ingress',      label:'Ingress',      color:'#60a5fa' },
+  { id:'power',        label:'Power',        color:'#e05c4a' },
+  { id:'energy',       label:'Energy',       color:'#4caf7d' },
+  { id:'efficiency',   label:'Efficiency',   color:'#a78bfa' },
+  { id:'localization', label:'Localization', color:'#f472b6' },
+  { id:'weather',      label:'Weather',      color:'#38bdf8' },
+  { id:'soc',          label:'SOC',          color:'#c9a84c' },
 ];
 
+// Full signal manifest — all 38 signals
+const SIGNALS = [
+  // ── Ingress ──
+  { field:'TotalPackVoltage',    stage:'ingress',    label:'Pack Voltage',        unit:'V',    color:'#60a5fa', decimals:1, yMin:80,  yMax:160, help:'Voltage of the battery pack.' },
+  { field:'AcceleratorPosition', stage:'ingress',    label:'Accelerator Pos.',    unit:'',     color:'#60a5fa', decimals:2, yMin:0,   yMax:1,   help:'Decimal percentage (0–1) of accelerator position.' },
+  { field:'BatteryCurrent',      stage:'ingress',    label:'Battery Current',     unit:'A',    color:'#60a5fa', decimals:1, yMin:-50, yMax:200, help:'Current flowing into the motor (+draw, −regen).' },
+  { field:'BatteryCurrentDir',   stage:'ingress',    label:'Battery Current Dir', unit:'',     color:'#60a5fa', decimals:0, yMin:0,   yMax:1,   help:'Sign of BatteryCurrent: 0=positive, 1=negative.' },
+  { field:'BatteryVoltage',      stage:'ingress',    label:'Motor Voltage',       unit:'V',    color:'#60a5fa', decimals:1, yMin:0,   yMax:160, help:'Voltage experienced by the motor.' },
+  { field:'CurrentSensor1',      stage:'ingress',    label:'Array Current 1',     unit:'A',    color:'#60a5fa', decimals:2, yMin:0,   yMax:10,  help:'Current of solar array string 1.' },
+  { field:'CurrentSensor2',      stage:'ingress',    label:'Array Current 2',     unit:'A',    color:'#60a5fa', decimals:2, yMin:0,   yMax:10,  help:'Current of solar array string 2.' },
+  { field:'MechBrakePressed',    stage:'ingress',    label:'Mech. Brake',         unit:'',     color:'#60a5fa', decimals:0, yMin:0,   yMax:1,   help:'Mechanical brake state: 0=released, 1=pressed.' },
+  { field:'PackCurrent',         stage:'ingress',    label:'Pack Current',        unit:'A',    color:'#60a5fa', decimals:1, yMin:-50, yMax:200, help:'Signed current out of battery (+draw, −charge).' },
+  { field:'VehicleVelocity',     stage:'ingress',    label:'Vehicle Velocity',    unit:'m/s',  color:'#60a5fa', decimals:1, yMin:0,   yMax:50,  help:'Speed of Brightside in m/s.' },
+  { field:'VoltSensor1',         stage:'ingress',    label:'Array Voltage 1',     unit:'V',    color:'#60a5fa', decimals:1, yMin:0,   yMax:80,  help:'Voltage of solar array string 1.' },
+  { field:'VoltSensor2',         stage:'ingress',    label:'Array Voltage 2',     unit:'V',    color:'#60a5fa', decimals:1, yMin:0,   yMax:80,  help:'Voltage of solar array string 2.' },
+  { field:'VoltageofLeast',      stage:'ingress',    label:'Weakest Module V',    unit:'V',    color:'#60a5fa', decimals:2, yMin:2.5, yMax:4.2, help:'Voltage of the battery module with lowest voltage.' },
+
+  // ── Power ──
+  { field:'PackPower',           stage:'power',      label:'Pack Power',          unit:'W',    color:'#e05c4a', decimals:0, yMin:-1000, yMax:15000, help:'Net power leaving the battery in W.' },
+  { field:'MotorPower',          stage:'power',      label:'Motor Power',         unit:'W',    color:'#e05c4a', decimals:0, yMin:-2000, yMax:10000, help:'Net power used by the motor. Negative = regen.' },
+
+  // ── Energy ──
+  { field:'EnergyVOLExtrapolated',       stage:'energy', label:'Energy (VOL)',    unit:'Wh',   color:'#4caf7d', decimals:0, yMin:0,    yMax:5000,  help:'Battery energy estimated from VoltageofLeast & SANYO NCR18650GA datasheet.' },
+  { field:'IntegratedPackPower',         stage:'energy', label:'Integrated Pack', unit:'Wh',   color:'#4caf7d', decimals:0, yMin:-500, yMax:5000,  help:'Integral of pack power in watt-hours since event start.' },
+  { field:'EnergyFromIntegratedPower',   stage:'energy', label:'Energy (Coulomb)',unit:'Wh',   color:'#4caf7d', decimals:0, yMin:0,    yMax:5000,  help:'Coulomb-counting energy estimate. Smoother short-term, may drift long-term.' },
+
+  // ── Efficiency ──
+  { field:'Efficiency1Hour',     stage:'efficiency', label:'Efficiency 1-hr',     unit:'J/m',  color:'#a78bfa', decimals:1, yMin:0,   yMax:800,   help:'Driving efficiency averaged over 1-hour periods.' },
+  { field:'Efficiency5Minute',   stage:'efficiency', label:'Efficiency 5-min',    unit:'J/m',  color:'#a78bfa', decimals:1, yMin:0,   yMax:800,   help:'Driving efficiency averaged over 5-minute periods.' },
+  { field:'EfficiencyLap',       stage:'efficiency', label:'Efficiency per Lap',  unit:'J/m',  color:'#a78bfa', decimals:1, yMin:0,   yMax:800,   help:'Driving efficiency averaged over each lap (5.04 km).' },
+
+  // ── Localization ──
+  { field:'LapIndex',            stage:'localization', label:'Lap Index',         unit:'lap',  color:'#f472b6', decimals:0, yMin:0,   yMax:60,    help:'Best available lap index. Prefers spreadsheet > integrated speed.' },
+  { field:'TrackIndex',          stage:'localization', label:'Track Index',       unit:'',     color:'#f472b6', decimals:2, yMin:0,   yMax:1,     help:'Best available track position index.' },
+  { field:'LapIndexIntegrated',  stage:'localization', label:'Lap Idx (Integrated)','unit':'lap',color:'#f472b6', decimals:0, yMin:0, yMax:60,   help:'Lap index estimated by integrating VehicleVelocity / 5040 m.' },
+  { field:'LapIndexSpreadsheet', stage:'localization', label:'Lap Idx (Sheet)',   unit:'lap',  color:'#f472b6', decimals:0, yMin:0,   yMax:60,    help:'Lap index from FSGP timing spreadsheet.' },
+  { field:'TrackDistSpreadsheet',stage:'localization', label:'Track Distance',    unit:'m',    color:'#f472b6', decimals:0, yMin:0,   yMax:5040,  help:'Distance along current lap from spreadsheet splits + integrated speed.' },
+  { field:'TrackIdxSpreadsheet', stage:'localization', label:'Track Idx (Sheet)', unit:'',     color:'#f472b6', decimals:2, yMin:0,   yMax:1,     help:'Track index from spreadsheet splits + integrated speed.' },
+
+  // ── Weather ──
+  { field:'AirTemperature',      stage:'weather',    label:'Air Temperature',     unit:'°C',   color:'#38bdf8', decimals:1, yMin:-10, yMax:45,    help:'Air temperature at 2 m above surface.' },
+  { field:'Azimuth',             stage:'weather',    label:'Solar Azimuth',       unit:'°',    color:'#38bdf8', decimals:0, yMin:-180,yMax:180,   help:'Angle between sun direction and due north. −90=east, 0=north, +90=west.' },
+  { field:'DHI',                 stage:'weather',    label:'DHI',                 unit:'W/m²', color:'#38bdf8', decimals:0, yMin:0,   yMax:400,   help:'Diffuse Horizontal Irradiance — scattered sky radiation.' },
+  { field:'DNI',                 stage:'weather',    label:'DNI',                 unit:'W/m²', color:'#38bdf8', decimals:0, yMin:0,   yMax:1000,  help:'Direct Normal Irradiance — beam radiation from sun direction.' },
+  { field:'GHI',                 stage:'weather',    label:'GHI',                 unit:'W/m²', color:'#38bdf8', decimals:0, yMin:0,   yMax:1200,  help:'Global Horizontal Irradiance — total surface irradiance.' },
+  { field:'PrecipitationRate',   stage:'weather',    label:'Precipitation',       unit:'mm/h', color:'#38bdf8', decimals:1, yMin:0,   yMax:50,    help:'Estimated average precipitation rate.' },
+  { field:'WindDirection',       stage:'weather',    label:'Wind Direction',      unit:'°',    color:'#38bdf8', decimals:0, yMin:0,   yMax:360,   help:'Wind direction at 10 m. 0=north, 270=west.' },
+  { field:'WindSpeed',           stage:'weather',    label:'Wind Speed',          unit:'m/s',  color:'#38bdf8', decimals:1, yMin:0,   yMax:20,    help:'Wind speed at 10 m above ground.' },
+  { field:'Zenith',              stage:'weather',    label:'Solar Zenith',        unit:'°',    color:'#38bdf8', decimals:0, yMin:0,   yMax:90,    help:'Angle between sun and zenith. 0=overhead, 90=horizon.' },
+
+  // ── SOC ──
+  { field:'UnfilteredSOC',       stage:'soc',        label:'SOC (Unfiltered)',    unit:'',     color:'#c9a84c', decimals:3, yMin:0,   yMax:1,     help:'Thevenin circuit SOC estimate. Limited by current sensor accuracy.' },
+  { field:'SOC',                 stage:'soc',        label:'SOC (Kalman)',        unit:'',     color:'#c9a84c', decimals:3, yMin:0,   yMax:1,     help:'Thevenin + Extended Kalman Filter SOC. Uses voltage to correct for sensor drift.' },
+];
+
+// Backwards-compat alias for map color-by & calc engine
+const METRICS = SIGNALS;
+
 const MAX_MS  = 3600 * 1000;
-const history = {};   // field → [{t, v}]
-const gpsHistory = []; // [{t, lat, lon}]
+const history = {};
+const gpsHistory = [];
 const latest  = {};
+SIGNALS.forEach(m => { history[m.field] = []; latest[m.field] = { value:null, prev:null }; });
 
-METRICS.forEach(m => { history[m.field] = []; latest[m.field] = { value:null, prev:null }; });
-
-// ─── CARD STRIP ─────────────────────────────────────────────────────────────
-const strip = document.getElementById('cardStrip');
-
-// metric cards
-METRICS.forEach(m => {
-  const card = document.createElement('div');
-  card.className = 'metric-card';
-  card.id = 'card-' + m.field;
-  card.style.setProperty('--card-color', m.color);
-  card.innerHTML = `
-    <div class="mc-label">${m.label}</div>
-    <div class="mc-value-row">
-      <div class="mc-value no-data" id="mcv-${m.field}">—</div>
-      <div class="mc-unit">${m.unit}</div>
-    </div>
-    <div class="mc-bar-track"><div class="mc-bar-fill" id="mcb-${m.field}" style="width:0%"></div></div>
-    <div class="mc-delta" id="mcd-${m.field}"></div>
-  `;
-  card.addEventListener('click', () => activateMetric(m.field));
-  strip.appendChild(card);
-});
-
-// map card — clearly separated distinct button
-const sep = document.createElement('div');
-sep.className = 'map-card-separator';
-strip.appendChild(sep);
-
-const mapCard = document.createElement('div');
-mapCard.className = 'map-card-btn';
-mapCard.id = 'card-map';
-mapCard.innerHTML = `
-  <div class="map-card-icon">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-      <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
-    </svg>
-  </div>
-  <div class="map-card-label">Map View</div>
-  <div class="map-card-sub" id="mcd-gps">GPS Track</div>
-`;
-mapCard.addEventListener('click', activateMap);
-strip.appendChild(mapCard);
-
-// ─── TIME-DOMAIN PANEL ──────────────────────────────────────────────────────
-let activeField  = null;   // kept for map compat; null when multi-plot active
+// ─── SIDEBAR BUILDER ─────────────────────────────────────────────────────────
 let activeFields = new Set();
-let windowSec    = 60;
-let rafId        = null;
+let activeField  = null;  // kept for map compat
+
+function buildSidebar() {
+  const scroll = document.getElementById('sidebarScroll');
+  scroll.innerHTML = '';
+
+  STAGES.forEach(stage => {
+    const signals = SIGNALS.filter(s => s.stage === stage.id);
+    if (!signals.length) return;
+
+    const group = document.createElement('div');
+    group.className = 'stage-group open';
+    group.dataset.stage = stage.id;
+
+    const header = document.createElement('div');
+    header.className = 'stage-header';
+    header.innerHTML = `
+      <div class="stage-dot" style="background:${stage.color}"></div>
+      <div class="stage-name">${stage.label}</div>
+      <div class="stage-count">${signals.length}</div>
+      <svg class="stage-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
+    `;
+    header.addEventListener('click', () => group.classList.toggle('open'));
+
+    const sigList = document.createElement('div');
+    sigList.className = 'stage-signals';
+
+    signals.forEach(sig => {
+      const row = document.createElement('div');
+      row.className = 'signal-row';
+      row.id = 'sigrow-' + sig.field;
+      row.style.setProperty('--stage-color', stage.color);
+      row.dataset.label = (sig.label + ' ' + sig.field + ' ' + sig.unit).toLowerCase();
+      row.innerHTML = `
+        <div class="sig-name" title="${sig.help}">${sig.label}</div>
+        <div class="sig-value" id="sigval-${sig.field}">—</div>
+        <div class="sig-unit">${sig.unit}</div>
+      `;
+      row.addEventListener('click', (e) => {
+        const multiSelect = e.ctrlKey || e.metaKey;
+        activateSignal(sig.field, multiSelect);
+      });
+      sigList.appendChild(row);
+    });
+
+    group.appendChild(header);
+    group.appendChild(sigList);
+    scroll.appendChild(group);
+  });
+}
+
+// ─── SIGNAL ACTIVATION ───────────────────────────────────────────────────────
+function activateSignal(field, multiSelect) {
+  const sig = SIGNALS.find(s => s.field === field);
+  if (!sig) return;
+
+  stopLoop();
+  clearMapPanel();
+  activeField = null;
+  document.getElementById('sidebarMapBtn').classList.remove('active');
+
+  if (multiSelect) {
+    if (activeFields.has(field)) activeFields.delete(field);
+    else if (activeFields.size < 3) activeFields.add(field);
+  } else {
+    if (activeFields.size === 1 && activeFields.has(field)) {
+      activeFields.clear();
+    } else {
+      activeFields.clear();
+      activeFields.add(field);
+    }
+  }
+
+  // Update row highlights
+  SIGNALS.forEach(s => {
+    const row = document.getElementById('sigrow-' + s.field);
+    if (row) row.classList.toggle('active', activeFields.has(s.field));
+  });
+
+  if (activeFields.size === 0) {
+    const area = document.getElementById('mainArea');
+    area.innerHTML = '<div class="plot-panel"><div class="plot-empty"><div class="plot-empty-hint">Select a signal from the sidebar</div><div class="plot-empty-sub">Hold Ctrl / ⌘ to overlay up to 3 signals</div></div></div>';
+    return;
+  }
+
+  let pp = document.getElementById('plotPanel');
+  const hasCanvas = pp && !!pp.querySelector('#plotCanvas');
+  if (!hasCanvas) {
+    const area = document.getElementById('mainArea');
+    area.innerHTML = '';
+    pp = document.createElement('div');
+    pp.id = 'plotPanel'; pp.className = 'plot-panel';
+    area.appendChild(pp);
+    buildChartPanel();
+  } else {
+    updateChartLegend();
+  }
+  if (staticMode) render(); else startLoop();
+}
+
+// ─── CHART PANEL ─────────────────────────────────────────────────────────────
+let windowSec = 60;
+let rafId = null;
 
 function buildChartPanel() {
   const panel = document.getElementById('plotPanel');
   panel.className = 'plot-panel';
-  // derive a representative color from the first active metric
-  const firstM = METRICS.find(x => activeFields.has(x.field));
+  const firstM = SIGNALS.find(x => activeFields.has(x.field));
   const titleColor = firstM ? firstM.color : 'var(--text)';
 
   panel.innerHTML = `
     <div class="plot-toolbar" id="plotToolbar" style="--card-color:${titleColor}">
-      <div id="chartLegend" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1;min-width:0;"></div>
+      <div id="chartLegend" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:0;"></div>
 
       <div class="mode-toggle">
         <button class="mode-btn ${!staticMode?'on':''}" id="btnLive" onclick="setMode('live')">⬤ Live</button>
@@ -628,9 +686,7 @@ function buildChartPanel() {
     if (v >= 5 && v <= 3600) { windowSec = v; document.querySelectorAll('.preset').forEach(b => b.classList.remove('on')); }
   });
   setWinHighlight(windowSec);
-  // Init custom pickers now that their containers exist in the DOM
-  dtInit('dtFrom', null);
-  dtInit('dtTo',   null);
+  dtInit('dtFrom', null); dtInit('dtTo', null);
   prefillStaticInputs();
   updateChartLegend();
 }
@@ -639,36 +695,26 @@ function updateChartLegend() {
   const el = document.getElementById('chartLegend');
   if (!el) return;
   el.innerHTML = '';
-  METRICS.filter(m => activeFields.has(m.field)).forEach(m => {
+  SIGNALS.filter(m => activeFields.has(m.field)).forEach(m => {
     const chip = document.createElement('div');
-    chip.style.cssText = 'display:flex;align-items:center;gap:5px;cursor:pointer;padding:3px 8px 3px 6px;border-radius:4px;border:1px solid ' + m.color + '40;background:' + m.color + '10;transition:background .15s;';
+    chip.style.cssText = `display:flex;align-items:center;gap:5px;cursor:pointer;padding:3px 8px 3px 6px;border-radius:4px;border:1px solid ${m.color}40;background:${m.color}10;transition:background .15s;`;
     chip.title = 'Click to remove ' + m.label;
-    chip.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${m.color};flex-shrink:0;"></span><span style="font-size:12px;font-weight:600;color:${m.color};white-space:nowrap;">${m.label}</span><span style="font-size:11px;color:var(--muted);margin-left:2px;">${m.unit}</span>`;
+    chip.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${m.color};flex-shrink:0;"></span><span style="font-size:12px;font-weight:600;color:${m.color};white-space:nowrap;">${m.label}</span><span style="font-size:11px;color:var(--muted);margin-left:2px;">${m.unit}</span>`;
     chip.addEventListener('mouseenter', () => chip.style.background = m.color + '20');
     chip.addEventListener('mouseleave', () => chip.style.background = m.color + '10');
-    chip.addEventListener('click', () => activateMetric(m.field));
+    chip.addEventListener('click', () => activateSignal(m.field, true));
     el.appendChild(chip);
   });
-  // hint if only one selected
-  if (activeFields.size === 1) {
+  if (activeFields.size < 3) {
     const hint = document.createElement('span');
     hint.style.cssText = 'font-size:11px;color:var(--muted);font-style:italic;';
-    hint.textContent = 'Click more metrics to overlay';
+    hint.textContent = activeFields.size === 1 ? 'Ctrl+click to overlay up to 2 more signals' : 'Ctrl+click to overlay 1 more signal';
     el.appendChild(hint);
   }
 }
 
-// ─── STATIC MODE ────────────────────────────────────────────────────────────
-let staticMode  = false;
-let staticFrom  = null;   // ms timestamp
-let staticTo    = null;   // ms timestamp
-
-function toLocalDatetimeStr(ms) {
-  const d = new Date(ms);
-  // format: YYYY-MM-DDTHH:MM:SS
-  const pad = n => String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
+// ─── STATIC MODE ─────────────────────────────────────────────────────────────
+let staticMode = false, staticFrom = null, staticTo = null;
 
 function prefillStaticInputs() {
   const now = Date.now();
@@ -684,97 +730,27 @@ function setMode(mode) {
   document.getElementById('liveInputs')  ?.classList.toggle('hidden',  staticMode);
   document.getElementById('staticBadge') ?.classList.toggle('hidden', !staticMode);
   if (staticMode) {
-    if (!staticFrom || !staticTo) {
-      staticTo   = Date.now();
-      staticFrom = staticTo - windowSec * 1000;
-    }
-    prefillStaticInputs();
-    stopLoop();
-    render();
-  } else {
-    staticFrom = null; staticTo = null;
-    startLoop();
-  }
+    if (!staticFrom || !staticTo) { staticTo = Date.now(); staticFrom = staticTo - windowSec * 1000; }
+    prefillStaticInputs(); stopLoop(); render();
+  } else { staticFrom = null; staticTo = null; startLoop(); }
 }
 
 function applyStaticRange() {
-  const f = dtGet('dtFrom');
-  const t = dtGet('dtTo');
+  const f = dtGet('dtFrom'), t = dtGet('dtTo');
   if (!f || !t || f >= t) {
     const flash = id => { const el = document.getElementById(id); if(el){el.style.borderColor='var(--red)'; setTimeout(()=>el.style.borderColor='',1200);} };
-    flash('dtFrom'); flash('dtTo');
-    return;
+    flash('dtFrom'); flash('dtTo'); return;
   }
-  staticFrom = f; staticTo = t;
-  stopLoop();
-  render();
+  staticFrom = f; staticTo = t; stopLoop(); render();
 }
 
-function activateMetric(field) {
-  const m = METRICS.find(x => x.field === field);
-  if (!m) return;
-
-  stopLoop();
-  clearMapPanel();
-  activeField = null;
-
-  if (activeFields.has(field)) {
-    activeFields.delete(field);
-  } else {
-    activeFields.add(field);
-  }
-
-  document.getElementById('card-map').classList.remove('active');
-  METRICS.forEach(mx => {
-    document.getElementById('card-' + mx.field)
-      .classList.toggle('active', activeFields.has(mx.field));
-  });
-
-  if (activeFields.size === 0) {
-    const area = document.getElementById('mainArea');
-    area.innerHTML = '<div class="plot-panel"><div class="plot-empty"><div class="plot-empty-hint">Select a metric above to view its plot, or open the Map view</div></div></div>';
-    return;
-  }
-
-  let pp = document.getElementById('plotPanel');
-  const hasCanvas = pp && !!pp.querySelector('#plotCanvas');
-  if (!hasCanvas) {
-    const area = document.getElementById('mainArea');
-    area.innerHTML = '';
-    pp = document.createElement('div');
-    pp.id = 'plotPanel';
-    pp.className = 'plot-panel';
-    area.appendChild(pp);
-    buildChartPanel();
-  } else {
-    updateChartLegend();
-  }
-  if (staticMode) { render(); } else { startLoop(); }
-}
-
-function setWin(sec, btn) {
-  windowSec = sec;
-  document.querySelectorAll('.preset').forEach(b => b.classList.remove('on'));
-  if (btn) btn.classList.add('on');
-  const wi = document.getElementById('winNum');
-  if (wi) wi.value = sec;
-}
-
-function setWinHighlight(sec) {
-  const map = { 30:'30s', 60:'1m', 300:'5m', 600:'10m' };
-  document.querySelectorAll('.preset').forEach(b => b.classList.toggle('on', b.textContent === map[sec]));
-}
-
-// ─── CANVAS RENDERER ────────────────────────────────────────────────────────
-
+// ─── CANVAS RENDERER ─────────────────────────────────────────────────────────
 function render() {
   const canvas = document.getElementById('plotCanvas');
   if (!canvas) return;
-  // support both single-field (map compat) and multi-select
   const fields = activeField ? [activeField] : Array.from(activeFields);
   if (fields.length === 0) return;
-
-  const metrics = fields.map(f => METRICS.find(x => x.field === f)).filter(Boolean);
+  const metrics = fields.map(f => SIGNALS.find(x => x.field === f)).filter(Boolean);
   if (!metrics.length) return;
 
   const dpr = window.devicePixelRatio || 1;
@@ -783,32 +759,17 @@ function render() {
   canvas.width = W * dpr; canvas.height = H * dpr;
   const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
 
-  // time window
   let tStart, tEnd, isStatic = staticMode && staticFrom && staticTo;
   if (isStatic) { tStart = staticFrom; tEnd = staticTo; }
-  else          { tEnd = Date.now(); tStart = tEnd - windowSec * 1000; }
+  else { tEnd = Date.now(); tStart = tEnd - windowSec * 1000; }
   const tSpan = tEnd - tStart || 1;
 
-  // Left pad grows with number of series (each gets a Y-axis strip)
   const Y_AXIS_W = 44;
-  const PAD_multi = {
-    t: 12,
-    b: 24,
-    l: Math.min(Y_AXIS_W * metrics.length, 140),
-    r: 12
-  };
-  const cX = PAD_multi.l, cY = PAD_multi.t;
-  const cW = W - PAD_multi.l - PAD_multi.r;
-  const cH = H - PAD_multi.t - PAD_multi.b;
+  const PAD = { t:12, b:24, l:Math.min(Y_AXIS_W * metrics.length, 140), r:12 };
+  const cX = PAD.l, cY = PAD.t, cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+  const GRID = '#ffffff0a', AXIS = '#ffffff18', LABEL = '#7a8fa3', FONT = '10px Poppins,sans-serif';
+  ctx.clearRect(0, 0, W, H); ctx.font = FONT;
 
-  const GRID  = '#ffffff0a';
-  const AXIS  = '#ffffff18';
-  const LABEL = '#7a8fa3';
-  const FONT  = '10px Poppins,sans-serif';
-  ctx.clearRect(0, 0, W, H);
-  ctx.font = FONT;
-
-  // compute per-series data and y-ranges
   const seriesData = metrics.map(m => {
     const pts = history[m.field].filter(d => d.t >= tStart && d.t <= tEnd);
     let yMin = m.yMin, yMax = m.yMax;
@@ -823,45 +784,29 @@ function render() {
 
   const toX = t => cX + ((t - tStart) / tSpan) * cW;
 
-  // Draw shared grid lines (5 horizontal) using first series scale
   for (let i = 0; i <= 5; i++) {
     const y = cY + cH - (i / 5) * cH;
     ctx.strokeStyle = GRID; ctx.lineWidth = .5;
     ctx.beginPath(); ctx.moveTo(cX, y); ctx.lineTo(cX + cW, y); ctx.stroke();
   }
 
-  // Draw per-series Y-axis (stacked left)
   seriesData.forEach((s, idx) => {
-    const axX = PAD_multi.l - Y_AXIS_W * (idx + 1);
+    const axX = PAD.l - Y_AXIS_W * (idx + 1);
     const toY = v => cY + cH - ((v - s.yMin) / s.yRange) * cH;
-
     ctx.font = FONT;
     for (let i = 0; i <= 5; i++) {
       const v = s.yMin + (s.yRange / 5) * i;
-      const y = toY(v);
-      ctx.fillStyle = s.m.color + 'cc';
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(v.toFixed(s.m.decimals <= 1 ? 1 : 2), axX + Y_AXIS_W - 4, y);
+      ctx.fillStyle = s.m.color + 'cc'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(v.toFixed(s.m.decimals <= 1 ? 1 : 2), axX + Y_AXIS_W - 4, cY + cH - (i/5)*cH);
     }
-
-    // small colored tick on axis edge
     ctx.strokeStyle = s.m.color + '60'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(axX + Y_AXIS_W, cY); ctx.lineTo(axX + Y_AXIS_W, cY + cH); ctx.stroke();
-
-    // unit label rotated
-    ctx.save();
-    ctx.font = '9px Poppins,sans-serif';
-    ctx.fillStyle = s.m.color + '99';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.translate(axX + 7, cY + cH / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText(s.m.unit, 0, 0);
-    ctx.restore();
+    ctx.save(); ctx.font = '9px Poppins,sans-serif'; ctx.fillStyle = s.m.color + '99';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.translate(axX + 7, cY + cH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText(s.m.unit, 0, 0); ctx.restore();
   });
 
-  // X-axis labels
   const xN = Math.max(2, Math.min(8, Math.floor(cW / 90)));
   ctx.font = FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (let i = 0; i <= xN; i++) {
@@ -879,15 +824,12 @@ function render() {
     ctx.beginPath(); ctx.moveTo(x, cY + cH); ctx.lineTo(x, cY + cH + 3); ctx.stroke();
   }
 
-  // Bottom axis line
   ctx.strokeStyle = AXIS; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(cX, cY + cH); ctx.lineTo(cX + cW, cY + cH); ctx.stroke();
 
-  // Draw each series
   seriesData.forEach(s => {
     const { m, pts, yMin, yRange } = s;
     const toY = v => cY + cH - ((v - yMin) / yRange) * cH;
-
     if (pts.length < 2) {
       if (seriesData.length === 1) {
         ctx.fillStyle = LABEL; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -896,40 +838,26 @@ function render() {
       }
       return;
     }
-
     ctx.save(); ctx.beginPath(); ctx.rect(cX, cY, cW, cH); ctx.clip();
-
-    // zero line if crosses zero
     if (yMin < 0 && (yMin + yRange) > 0) {
       const z = toY(0);
       ctx.strokeStyle = m.color + '30'; ctx.lineWidth = 1; ctx.setLineDash([4, 5]);
       ctx.beginPath(); ctx.moveTo(cX, z); ctx.lineTo(cX + cW, z); ctx.stroke(); ctx.setLineDash([]);
     }
-
-    // fill under curve (subtle, each series stacked)
     ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
     pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
     ctx.lineTo(toX(pts[pts.length-1].t), cY + cH); ctx.lineTo(toX(pts[0].t), cY + cH);
     ctx.closePath();
-    // lower opacity fill when multiple series to avoid visual clutter
-    const fillOpacity = seriesData.length > 1 ? '08' : '14';
-    ctx.fillStyle = m.color + fillOpacity; ctx.fill();
-
-    // line
+    ctx.fillStyle = m.color + (seriesData.length > 1 ? '08' : '14'); ctx.fill();
     ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
     pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
-    ctx.strokeStyle = m.color;
-    ctx.lineWidth = seriesData.length > 1 ? 1.5 : 1.5;
-    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
-
-    // live dot
+    ctx.strokeStyle = m.color; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
     if (!isStatic) {
       const lp = pts[pts.length-1];
       ctx.beginPath(); ctx.arc(toX(lp.t), toY(lp.v), 3.5, 0, Math.PI*2);
       ctx.fillStyle = m.color; ctx.fill();
       ctx.strokeStyle = '#0d1b2a'; ctx.lineWidth = 1.5; ctx.stroke();
     }
-
     ctx.restore();
   });
 }
@@ -938,18 +866,22 @@ function loop()      { render(); rafId = requestAnimationFrame(loop); }
 function startLoop() { if (!rafId) rafId = requestAnimationFrame(loop); }
 function stopLoop()  { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
 
-// ─── MAP PANEL ──────────────────────────────────────────────────────────────
-let leafletMap    = null;
-let mapPolylines  = [];   // array of L.polyline segments
-let replayMarker  = null;
-let replayTimer   = null;
-let replayIdx     = 0;
-let isPlaying     = false;
-let colorByField  = 'speed';
-// mapRange: [0..1] start/end fraction of gpsHistory shown
-let mapRangeStart = 0;
-let mapRangeEnd   = 1;
-let mapFitted     = false;  // only fitBounds on first draw
+function setWin(sec, btn) {
+  windowSec = sec;
+  document.querySelectorAll('.preset').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  const wi = document.getElementById('winNum'); if (wi) wi.value = sec;
+}
+
+function setWinHighlight(sec) {
+  const map = { 30:'30s', 60:'1m', 300:'5m', 600:'10m' };
+  document.querySelectorAll('.preset').forEach(b => b.classList.toggle('on', b.textContent === map[sec]));
+}
+
+// ─── MAP PANEL ───────────────────────────────────────────────────────────────
+let leafletMap = null, mapPolylines = [], replayMarker = null;
+let replayTimer = null, replayIdx = 0, isPlaying = false;
+let colorByField = 'VehicleVelocity', mapRangeStart = 0, mapRangeEnd = 1, mapFitted = false;
 
 function clearMapPanel() {
   stopReplay();
@@ -958,13 +890,10 @@ function clearMapPanel() {
 }
 
 function activateMap() {
-  stopLoop();
-  clearMapPanel();
-  activeField = null;
-  activeFields.clear();
-
-  document.querySelectorAll('.metric-card').forEach(c => c.classList.remove('active'));
-  document.getElementById('card-map').classList.add('active');
+  stopLoop(); clearMapPanel();
+  activeField = null; activeFields.clear();
+  SIGNALS.forEach(s => { const r = document.getElementById('sigrow-' + s.field); if(r) r.classList.remove('active'); });
+  document.getElementById('sidebarMapBtn').classList.add('active');
 
   const area = document.getElementById('mainArea');
   area.innerHTML = '';
@@ -972,8 +901,7 @@ function activateMap() {
   panel.className = 'map-panel';
   area.appendChild(panel);
 
-  // build metric options
-  const metricOpts = METRICS.map(m =>
+  const metricOpts = SIGNALS.map(m =>
     `<option value="${m.field}" ${m.field === colorByField ? 'selected' : ''}>${m.label}</option>`
   ).join('');
 
@@ -987,7 +915,7 @@ function activateMap() {
         </div>
         <div class="map-legend">
           <span class="legend-lo" id="legendLo">low</span>
-          <div class="legend-grad" id="legendGrad"></div>
+          <div class="legend-grad"></div>
           <span class="legend-hi" id="legendHi">high</span>
         </div>
       </div>
@@ -1006,10 +934,8 @@ function activateMap() {
         <div class="speed-wrap">
           <span class="speed-label">Speed</span>
           <select class="speed-select" id="replaySpeed">
-            <option value="1">1×</option>
-            <option value="5">5×</option>
-            <option value="10" selected>10×</option>
-            <option value="30">30×</option>
+            <option value="1">1×</option><option value="5">5×</option>
+            <option value="10" selected>10×</option><option value="30">30×</option>
           </select>
         </div>
       </div>
@@ -1017,255 +943,154 @@ function activateMap() {
     <div class="map-wrap"><div id="leafletMap"></div></div>
   `;
 
-  // init Leaflet
   leafletMap = L.map('leafletMap', { zoomControl:true, attributionControl:true });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution:'© OpenStreetMap contributors',
-    maxZoom:19,
+    attribution:'© OpenStreetMap contributors', maxZoom:19,
   }).addTo(leafletMap);
 
-  // Init custom time pickers for the map scrubbers
   dtInit('dtMapStart', () => onMapPickerChange('start'));
   dtInit('dtMapEnd',   () => onMapPickerChange('end'));
-
-  drawMapTrace();
-  syncTimeInputs();
-
+  drawMapTrace(); syncTimeInputs();
 }
 
-// ─── MAP DRAWING ─────────────────────────────────────────────────────────────
-
-// color ramp: green → gold → red (original palette)
 function metricToColor(norm) {
-  const r = norm < .5
-    ? Math.round(76  + (201-76)  * norm * 2)
-    : Math.round(201 + (224-201) * (norm-.5) * 2);
-  const g = norm < .5
-    ? Math.round(175 + (168-175) * norm * 2)
-    : Math.round(168 + (92-168)  * (norm-.5) * 2);
-  const b = norm < .5
-    ? Math.round(61  + (76-61)   * norm * 2)
-    : Math.round(76  + (74-76)   * (norm-.5) * 2);
+  const r = norm < .5 ? Math.round(76 + (201-76)*norm*2) : Math.round(201+(224-201)*(norm-.5)*2);
+  const g = norm < .5 ? Math.round(175+(168-175)*norm*2) : Math.round(168+(92-168)*(norm-.5)*2);
+  const b = norm < .5 ? Math.round(61+(76-61)*norm*2)    : Math.round(76+(74-76)*(norm-.5)*2);
   return `rgb(${r},${g},${b})`;
 }
 
 function drawMapTrace() {
   if (!leafletMap) return;
-
-  // clear old layers
-  mapPolylines.forEach(p => p.remove());
-  mapPolylines = [];
+  mapPolylines.forEach(p => p.remove()); mapPolylines = [];
   if (replayMarker) { replayMarker.remove(); replayMarker = null; }
-
   const n = gpsHistory.length;
-  if (n < 2) {
-    // show world view, wait for data
-    leafletMap.setView([49.2827, -123.1207], 13);
-    return;
-  }
+  if (n < 2) { leafletMap.setView([49.2827, -123.1207], 13); return; }
 
-  // slice by range
   const iStart = Math.floor(mapRangeStart * (n - 1));
-  const iEnd   = Math.ceil(mapRangeEnd   * (n - 1));
+  const iEnd   = Math.ceil(mapRangeEnd * (n - 1));
   const pts    = gpsHistory.slice(iStart, iEnd + 1);
-
   if (pts.length < 2) return;
 
-  // get coloring metric values for this slice
-  const mDef = METRICS.find(x => x.field === colorByField);
+  const mDef = SIGNALS.find(x => x.field === colorByField);
   const mHist = history[colorByField];
-
-  // build per-segment polylines
-  // each segment = pts[i] → pts[i+1], colored by metric value at pts[i].t
   let allVals = [];
-  pts.forEach(p => {
-    const nearest = nearestMetric(mHist, p.t);
-    if (nearest !== null) allVals.push(nearest);
-  });
+  pts.forEach(p => { const v = nearestMetric(mHist, p.t); if (v !== null) allVals.push(v); });
   const vMin = allVals.length ? Math.min(...allVals) : 0;
   const vMax = allVals.length ? Math.max(...allVals) : 1;
   const vRange = vMax - vMin || 1;
 
-  // update legend
   const legendLo = document.getElementById('legendLo');
   const legendHi = document.getElementById('legendHi');
   if (legendLo) legendLo.textContent = vMin.toFixed(mDef ? mDef.decimals : 1) + (mDef ? ' ' + mDef.unit : '');
   if (legendHi) legendHi.textContent = vMax.toFixed(mDef ? mDef.decimals : 1) + (mDef ? ' ' + mDef.unit : '');
 
-  // Group consecutive points into runs of similar color (32 buckets),
-  // then draw each run as a single smoothed polyline.
   const BUCKETS = 32;
-  let runLatLngs = [[pts[0].lat, pts[0].lon]];
-  let runBucket  = -1;
-
-  const flushRun = (col) => {
+  let runLatLngs = [[pts[0].lat, pts[0].lon]], runBucket = -1, prevCol = null;
+  const flushRun = col => {
     if (runLatLngs.length < 2) return;
-    mapPolylines.push(
-      L.polyline(runLatLngs, { color: col, weight: 4, opacity: 0.95,
-        smoothFactor: 1.5, lineJoin:'round', lineCap:'round' })
-       .addTo(leafletMap)
-    );
+    mapPolylines.push(L.polyline(runLatLngs, { color:col, weight:4, opacity:.95, smoothFactor:1.5, lineJoin:'round', lineCap:'round' }).addTo(leafletMap));
   };
-
-  let prevCol = null;
   for (let i = 0; i < pts.length - 1; i++) {
-    const v      = nearestMetric(mHist, pts[i].t);
-    const norm   = v !== null ? (v - vMin) / vRange : 0.5;
+    const v = nearestMetric(mHist, pts[i].t);
+    const norm = v !== null ? (v - vMin) / vRange : 0.5;
     const bucket = Math.round(norm * (BUCKETS - 1));
-    const col    = metricToColor(norm);
-
+    const col = metricToColor(norm);
     if (bucket !== runBucket) {
       flushRun(prevCol || col);
-      // start new run, overlapping one point for continuity
-      runLatLngs = runLatLngs.length > 0
-        ? [runLatLngs[runLatLngs.length - 1], [pts[i].lat, pts[i].lon]]
-        : [[pts[i].lat, pts[i].lon]];
+      runLatLngs = runLatLngs.length > 0 ? [runLatLngs[runLatLngs.length-1], [pts[i].lat, pts[i].lon]] : [[pts[i].lat, pts[i].lon]];
       runBucket = bucket;
-    } else {
-      runLatLngs.push([pts[i].lat, pts[i].lon]);
-    }
+    } else { runLatLngs.push([pts[i].lat, pts[i].lon]); }
     prevCol = col;
   }
-  // push last point and flush
   if (pts.length > 1) runLatLngs.push([pts[pts.length-1].lat, pts[pts.length-1].lon]);
   flushRun(prevCol || metricToColor(0.5));
-
-  // fit map to trace only on first draw; subsequent scrubs keep current view
-  if (!mapFitted) {
-    const bounds = L.latLngBounds(pts.map(p => [p.lat, p.lon]));
-    leafletMap.fitBounds(bounds, { padding:[24,24] });
-    mapFitted = true;
-  }
-
-  // start marker
+  if (!mapFitted) { leafletMap.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lon])), { padding:[24,24] }); mapFitted = true; }
   updateScrubInfo(iStart, iEnd, n);
 }
 
 function nearestMetric(hist, t) {
   if (!hist || !hist.length) return null;
   let lo = 0, hi = hist.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (hist[mid].t < t) lo = mid + 1; else hi = mid;
-  }
+  while (lo < hi) { const mid = (lo+hi)>>1; if (hist[mid].t < t) lo = mid+1; else hi = mid; }
   return hist[lo] ? hist[lo].v : null;
 }
 
-function setColorBy(field) {
-  colorByField = field;
-  drawMapTrace();
-}
+function setColorBy(field) { colorByField = field; drawMapTrace(); }
 
 function onScrub(which) {
-  const sEl = document.getElementById('scrubStart');
-  const eEl = document.getElementById('scrubEnd');
+  const sEl = document.getElementById('scrubStart'), eEl = document.getElementById('scrubEnd');
   let s = parseInt(sEl.value), e = parseInt(eEl.value);
-  if (s > e) {
-    if (which === 'start') sEl.value = e, s = e;
-    else                   eEl.value = s, e = s;
-  }
-  mapRangeStart = s / 1000;
-  mapRangeEnd   = e / 1000;
-  syncTimeInputs();
-  stopReplay();
-  drawMapTrace();
+  if (s > e) { if (which === 'start') { sEl.value = e; s = e; } else { eEl.value = s; e = s; } }
+  mapRangeStart = s / 1000; mapRangeEnd = e / 1000;
+  syncTimeInputs(); stopReplay(); drawMapTrace();
 }
 
 function onMapPickerChange(which) {
-  const n = gpsHistory.length;
-  if (n < 2) return;
-  const tFirst = gpsHistory[0].t, tLast = gpsHistory[n-1].t;
-  const tsStart = dtGet('dtMapStart') || tFirst;
-  const tsEnd   = dtGet('dtMapEnd')   || tLast;
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  let fracS = (clamp(tsStart, tFirst, tLast) - tFirst) / (tLast - tFirst);
-  let fracE = (clamp(tsEnd,   tFirst, tLast) - tFirst) / (tLast - tFirst);
-  if (which === 'start' && fracS > fracE) fracS = fracE;
-  if (which === 'end'   && fracE < fracS) fracE = fracS;
-  mapRangeStart = fracS;
-  mapRangeEnd   = fracE;
-  document.getElementById('scrubStart').value = Math.round(fracS * 1000);
-  document.getElementById('scrubEnd').value   = Math.round(fracE * 1000);
-  stopReplay();
-  drawMapTrace();
+  const n = gpsHistory.length; if (n < 2) return;
+  const tFirst = gpsHistory[0].t, tLast = gpsHistory[n-1].t, tSpan = tLast - tFirst || 1;
+  if (which === 'start') {
+    const t = dtGet('dtMapStart'); if (!t) return;
+    mapRangeStart = Math.max(0, Math.min(1, (t - tFirst) / tSpan));
+    if (mapRangeStart >= mapRangeEnd) mapRangeStart = Math.max(0, mapRangeEnd - 0.001);
+    document.getElementById('scrubStart').value = Math.round(mapRangeStart * 1000);
+  } else {
+    const t = dtGet('dtMapEnd'); if (!t) return;
+    mapRangeEnd = Math.max(0, Math.min(1, (t - tFirst) / tSpan));
+    if (mapRangeEnd <= mapRangeStart) mapRangeEnd = Math.min(1, mapRangeStart + 0.001);
+    document.getElementById('scrubEnd').value = Math.round(mapRangeEnd * 1000);
+  }
+  stopReplay(); drawMapTrace();
 }
 
 function syncTimeInputs() {
-  const n = gpsHistory.length;
-  if (n < 2) return;
+  const n = gpsHistory.length; if (n < 2) return;
   const tFirst = gpsHistory[0].t, tLast = gpsHistory[n-1].t;
-  const tS = tFirst + mapRangeStart * (tLast - tFirst);
-  const tE = tFirst + mapRangeEnd   * (tLast - tFirst);
-  dtSet('dtMapStart', tS);
-  dtSet('dtMapEnd',   tE);
+  const tSpan = tLast - tFirst || 1;
+  dtSet('dtMapStart', tFirst + mapRangeStart * tSpan);
+  dtSet('dtMapEnd',   tFirst + mapRangeEnd   * tSpan);
 }
 
 function updateScrubInfo(iStart, iEnd, n) {
-  if (n < 2) return;
+  const tFirst = gpsHistory[0]?.t, tLast = gpsHistory[n-1]?.t;
+  if (!tFirst || !tLast) return;
   syncTimeInputs();
 }
 
-// ─── REPLAY ──────────────────────────────────────────────────────────────────
 function toggleReplay() {
-  if (isPlaying) stopReplay();
-  else startReplay();
-}
-
-function startReplay() {
-  if (!leafletMap || gpsHistory.length < 2) return;
-  isPlaying = true;
   const btn = document.getElementById('replayBtn');
-  if (btn) btn.classList.add('playing'), btn.textContent = '⏸ Pause';
-
-  const n      = gpsHistory.length;
-  const iStart = Math.floor(mapRangeStart * (n - 1));
-  const iEnd   = Math.ceil(mapRangeEnd   * (n - 1));
-  const pts    = gpsHistory.slice(iStart, iEnd + 1);
+  if (isPlaying) { stopReplay(); return; }
+  isPlaying = true; btn?.classList.add('playing');
+  if (btn) btn.textContent = '⏹ Stop';
+  const n = gpsHistory.length;
+  const iStart = Math.floor(mapRangeStart*(n-1)), iEnd = Math.ceil(mapRangeEnd*(n-1));
+  const pts = gpsHistory.slice(iStart, iEnd+1);
   if (pts.length < 2) { stopReplay(); return; }
-
   replayIdx = 0;
-
-  // car marker
   if (replayMarker) replayMarker.remove();
-  const carIcon = L.divIcon({
-    className: '',
-    html: `<div style="
-      width:12px;height:12px;border-radius:50%;
-      background:#c9a84c;border:2px solid #fff;
-      box-shadow:0 0 6px #c9a84c88;
-    "></div>`,
-    iconSize: [12, 12], iconAnchor: [6, 6],
-  });
-  replayMarker = L.marker([pts[0].lat, pts[0].lon], { icon:carIcon, zIndexOffset:1000 }).addTo(leafletMap);
-
+  const carIcon = L.divIcon({ className:'', html:`<div style="width:12px;height:12px;border-radius:50%;background:#c9a84c;border:2px solid #fff;box-shadow:0 0 6px #c9a84c88;"></div>`, iconSize:[12,12], iconAnchor:[6,6] });
+  replayMarker = L.marker([pts[0].lat,pts[0].lon],{icon:carIcon,zIndexOffset:1000}).addTo(leafletMap);
   function step() {
     if (!isPlaying) return;
     replayIdx++;
     if (replayIdx >= pts.length) { stopReplay(); return; }
-    replayMarker.setLatLng([pts[replayIdx].lat, pts[replayIdx].lon]);
-
-    // interval based on actual time delta, divided by speed multiplier
-    const speedMul = parseFloat(document.getElementById('replaySpeed')?.value || 10);
-    const dtReal   = replayIdx < pts.length - 1
-      ? pts[replayIdx + 1].t - pts[replayIdx].t
-      : 500;
-    const dtFast   = Math.max(16, dtReal / speedMul);
-    replayTimer = setTimeout(step, dtFast);
+    replayMarker.setLatLng([pts[replayIdx].lat,pts[replayIdx].lon]);
+    const speedMul = parseFloat(document.getElementById('replaySpeed')?.value||10);
+    const dtReal = replayIdx < pts.length-1 ? pts[replayIdx+1].t - pts[replayIdx].t : 500;
+    replayTimer = setTimeout(step, Math.max(16, dtReal/speedMul));
   }
-
   replayTimer = setTimeout(step, 100);
 }
 
 function stopReplay() {
-  isPlaying = false;
-  clearTimeout(replayTimer); replayTimer = null;
+  isPlaying = false; clearTimeout(replayTimer); replayTimer = null;
   const btn = document.getElementById('replayBtn');
-  if (btn) btn.classList.remove('playing'), btn.textContent = '▶ Replay';
+  if (btn) { btn.classList.remove('playing'); btn.textContent = '▶ Replay'; }
 }
 
-// ─── DATA ────────────────────────────────────────────────────────────────────
+// ─── DATA PIPELINE ───────────────────────────────────────────────────────────
 function push(field, t, raw) {
-  const m = METRICS.find(x => x.field === field);
+  const m = SIGNALS.find(x => x.field === field);
   if (!m) return;
   const v = m.transform ? m.transform(raw) : raw;
   const h = history[field];
@@ -1276,56 +1101,79 @@ function push(field, t, raw) {
   const lat_ = latest[field];
   lat_.prev = lat_.value; lat_.value = v;
 
-  const valEl = document.getElementById('mcv-' + field);
-  if (valEl) { valEl.classList.remove('no-data'); valEl.textContent = v.toFixed(m.decimals); }
+  // Sidebar live value
+  const valEl = document.getElementById('sigval-' + field);
+  if (valEl) valEl.textContent = v.toFixed(m.decimals);
 
-  const barEl = document.getElementById('mcb-' + field);
-  if (barEl) {
-    const pct = ((v - m.yMin) / (m.yMax - m.yMin)) * 100;
-    barEl.style.width = Math.min(100, Math.max(0, pct)).toFixed(1) + '%';
-  }
-
-  const dEl = document.getElementById('mcd-' + field);
-  if (dEl && lat_.prev !== null) {
-    const diff = v - lat_.prev;
-    dEl.className = 'mc-delta ' + (diff > 0 ? 'delta-up' : diff < 0 ? 'delta-dn' : '');
-    dEl.textContent = (diff > 0 ? '▲ +' : diff < 0 ? '▼ ' : '') + Math.abs(diff).toFixed(m.decimals) + ' ' + m.unit;
-  }
+  // Vitals strip
+  if (field === 'TotalPackVoltage') { const el = document.getElementById('vital-voltage'); if(el) el.firstChild.textContent = v.toFixed(1); }
+  if (field === 'SOC')              { const el = document.getElementById('vital-soc');     if(el) el.firstChild.textContent = (v*100).toFixed(1); }
+  if (field === 'VehicleVelocity') { const el = document.getElementById('vital-speed');   if(el) el.firstChild.textContent = v.toFixed(1); }
+  if (field === 'PackPower')        { const el = document.getElementById('vital-power');   if(el) el.firstChild.textContent = v.toFixed(0); }
 }
 
 function pushGPS(t, lat, lon) {
   gpsHistory.push({ t, lat, lon });
   const cut = Date.now() - MAX_MS;
   while (gpsHistory.length && gpsHistory[0].t < cut) gpsHistory.shift();
-
-  // update map card sub-label
-  const dEl = document.getElementById('mcd-gps');
+  const dEl = document.getElementById('mapGpsSub');
   if (dEl) dEl.textContent = gpsHistory.length + ' pts';
-
-  // if map panel is active, incrementally add the new segment
   if (leafletMap && gpsHistory.length >= 2 && !isPlaying) {
-    const n  = gpsHistory.length;
-    const i  = n - 2; // second-to-last
-    const iS = Math.floor(mapRangeStart * (n - 1));
-    const iE = Math.ceil(mapRangeEnd   * (n - 1));
-    if (i >= iS && i < iE) {
-      // only redraw periodically to avoid per-frame full redraw
-      if (n % 5 === 0) drawMapTrace();
-    }
+    const n = gpsHistory.length, i = n-2;
+    const iS = Math.floor(mapRangeStart*(n-1)), iE = Math.ceil(mapRangeEnd*(n-1));
+    if (i >= iS && i < iE && n % 5 === 0) drawMapTrace();
   }
 }
 
 function ingest(data) {
   const now = Date.now();
-  METRICS.forEach(m => { if (data[m.field] !== undefined) push(m.field, now, data[m.field]); });
-  // GPS
-  if (data.lat !== undefined && data.lon !== undefined) {
-    pushGPS(data.timestamp || now, data.lat, data.lon);
-  }
+  SIGNALS.forEach(m => { if (data[m.field] !== undefined) push(m.field, now, data[m.field]); });
+  if (data.lat !== undefined && data.lon !== undefined) pushGPS(data.timestamp || now, data.lat, data.lon);
 }
 
-// ─── DUMMY DATA ──────────────────────────────────────────────────────────────
-// Real GPS trace (coords are [lat, lon])
+// ─── SIGNAL SEARCH ───────────────────────────────────────────────────────────
+function filterSignals(q) {
+  const query = q.trim().toLowerCase();
+  const scroll = document.getElementById('sidebarScroll');
+  scroll.querySelectorAll('.signal-row').forEach(row => {
+    const match = !query || row.dataset.label.includes(query);
+    row.classList.toggle('hidden-search', !match);
+  });
+  // collapse/expand stage groups based on visible signals
+  scroll.querySelectorAll('.stage-group').forEach(group => {
+    const visible = group.querySelectorAll('.signal-row:not(.hidden-search)').length;
+    if (query) {
+      group.classList.toggle('open', visible > 0);
+    }
+  });
+}
+
+// ─── SIDEBAR TOGGLE ──────────────────────────────────────────────────────────
+let sidebarOpen = true;
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  const sidebar = document.getElementById('sidebar');
+  const layout  = document.getElementById('bodyLayout');
+  const icon    = document.getElementById('sidebarToggleIcon');
+  const toggle  = document.getElementById('sidebarToggle');
+
+  sidebar.classList.toggle('collapsed', !sidebarOpen);
+  layout.classList.toggle('sidebar-collapsed', !sidebarOpen);
+
+  const left = sidebarOpen ? 'calc(var(--sidebar-w) - 1px)' : '0px';
+  toggle.style.left = left;
+  icon.innerHTML = sidebarOpen
+    ? '<polyline points="6 2 3 5 6 8"/>'
+    : '<polyline points="4 2 7 5 4 8"/>';
+
+  setTimeout(() => {
+    if (leafletMap) leafletMap.invalidateSize();
+    const canvas = document.getElementById('plotCanvas');
+    if (canvas && (activeFields.size > 0 || activeField)) render();
+  }, 260);
+}
+
+// ─── DUMMY DATA ───────────────────────────────────────────────────────────────
 const WAYPOINTS = [
     [ 37.0011529 , -86.36837867],[ 37.00122817, -86.3682181 ],[ 37.00133071, -86.36801267],
     [ 37.00143614, -86.36779264],[ 37.00152389, -86.3675912 ],[ 37.00160574, -86.36740819],
@@ -1427,184 +1275,155 @@ const WAYPOINTS = [
 ];
 
 let wpIdx = 0;
-const ds = { motor_power:2800, array_power:1600, battery_soc:84, speed:58, steering_angle:0, acceleration:0.1 };
+// Dummy state for all signals
+const ds = {
+  TotalPackVoltage: 120, AcceleratorPosition: 0.3, BatteryCurrent: 50, BatteryCurrentDir: 0,
+  BatteryVoltage: 115, CurrentSensor1: 4.2, CurrentSensor2: 3.8, MechBrakePressed: 0,
+  PackCurrent: 48, VehicleVelocity: 15, VoltSensor1: 50, VoltSensor2: 49, VoltageofLeast: 3.8,
+  PackPower: 5800, MotorPower: 5500,
+  EnergyVOLExtrapolated: 2400, IntegratedPackPower: -120, EnergyFromIntegratedPower: 2280,
+  Efficiency1Hour: 280, Efficiency5Minute: 300, EfficiencyLap: 290,
+  LapIndex: 3, TrackIndex: 0.45, LapIndexIntegrated: 3, LapIndexSpreadsheet: 3,
+  TrackDistSpreadsheet: 2268, TrackIdxSpreadsheet: 0.45,
+  AirTemperature: 28, Azimuth: 15, DHI: 80, DNI: 650, GHI: 700,
+  PrecipitationRate: 0, WindDirection: 180, WindSpeed: 3.5, Zenith: 42,
+  UnfilteredSOC: 0.72, SOC: 0.715,
+};
 
 function dummyTick() {
-  const w = (v, s, lo, hi) => Math.min(hi, Math.max(lo, v + (Math.random() - .5) * s));
-  ds.motor_power    = w(ds.motor_power,    200,  0,    5000);
-  ds.array_power    = w(ds.array_power,    100,  0,    3000);
-  ds.battery_soc    = w(ds.battery_soc,    .05,  0,    100);
-  ds.speed          = w(ds.speed,          3,    0,    100);
-  ds.steering_angle = w(ds.steering_angle, 3,   -40,   40);
-  ds.acceleration   = w(ds.acceleration,   .08, -.8,    .8);
+  const w = (v, s, lo, hi) => Math.min(hi, Math.max(lo, v + (Math.random()-.5)*s));
+  // ingress
+  ds.TotalPackVoltage    = w(ds.TotalPackVoltage, 0.5, 80, 160);
+  ds.AcceleratorPosition = w(ds.AcceleratorPosition, 0.05, 0, 1);
+  ds.BatteryCurrent      = w(ds.BatteryCurrent, 5, -50, 200);
+  ds.BatteryCurrentDir   = ds.BatteryCurrent < 0 ? 1 : 0;
+  ds.BatteryVoltage      = w(ds.BatteryVoltage, 0.4, 0, 160);
+  ds.CurrentSensor1      = w(ds.CurrentSensor1, 0.2, 0, 10);
+  ds.CurrentSensor2      = w(ds.CurrentSensor2, 0.2, 0, 10);
+  ds.MechBrakePressed    = Math.random() < 0.02 ? 1 : 0;
+  ds.PackCurrent         = w(ds.PackCurrent, 4, -50, 200);
+  ds.VehicleVelocity     = w(ds.VehicleVelocity, 1, 0, 50);
+  ds.VoltSensor1         = w(ds.VoltSensor1, 0.3, 0, 80);
+  ds.VoltSensor2         = w(ds.VoltSensor2, 0.3, 0, 80);
+  ds.VoltageofLeast      = w(ds.VoltageofLeast, 0.01, 2.5, 4.2);
+  // power
+  ds.PackPower           = ds.PackCurrent * ds.TotalPackVoltage;
+  ds.MotorPower          = ds.BatteryCurrent * ds.BatteryVoltage * (ds.BatteryCurrentDir ? -1:1);
+  // energy
+  ds.EnergyVOLExtrapolated    = w(ds.EnergyVOLExtrapolated, 5, 0, 5000);
+  ds.IntegratedPackPower      = w(ds.IntegratedPackPower, 3, -500, 5000);
+  ds.EnergyFromIntegratedPower= w(ds.EnergyFromIntegratedPower, 5, 0, 5000);
+  // efficiency
+  ds.Efficiency1Hour     = w(ds.Efficiency1Hour, 5, 0, 800);
+  ds.Efficiency5Minute   = w(ds.Efficiency5Minute, 8, 0, 800);
+  ds.EfficiencyLap       = w(ds.EfficiencyLap, 6, 0, 800);
+  // localization
+  ds.LapIndex            = Math.floor(w(ds.LapIndex, 0.01, 0, 60));
+  ds.TrackIndex          = w(ds.TrackIndex, 0.005, 0, 1);
+  ds.LapIndexIntegrated  = ds.LapIndex;
+  ds.LapIndexSpreadsheet = ds.LapIndex;
+  ds.TrackDistSpreadsheet= ds.TrackIndex * 5040;
+  ds.TrackIdxSpreadsheet = ds.TrackIndex;
+  // weather
+  ds.AirTemperature      = w(ds.AirTemperature, 0.05, -10, 45);
+  ds.Azimuth             = w(ds.Azimuth, 0.1, -180, 180);
+  ds.DHI                 = w(ds.DHI, 2, 0, 400);
+  ds.DNI                 = w(ds.DNI, 5, 0, 1000);
+  ds.GHI                 = w(ds.GHI, 5, 0, 1200);
+  ds.PrecipitationRate   = w(ds.PrecipitationRate, 0.01, 0, 50);
+  ds.WindDirection       = w(ds.WindDirection, 1, 0, 360);
+  ds.WindSpeed           = w(ds.WindSpeed, 0.1, 0, 20);
+  ds.Zenith              = w(ds.Zenith, 0.05, 0, 90);
+  // SOC
+  ds.UnfilteredSOC       = w(ds.UnfilteredSOC, 0.001, 0, 1);
+  ds.SOC                 = w(ds.SOC, 0.0008, 0, 1);
 
-  const pt = WAYPOINTS[wpIdx % WAYPOINTS.length];
-  wpIdx++;
-
+  const pt = WAYPOINTS[wpIdx % WAYPOINTS.length]; wpIdx++;
   const now = Date.now();
   pushGPS(now, pt[0], pt[1]);
-  push('speed',          now, ds.speed);
-  push('motor_power',    now, ds.motor_power);
-  push('array_power',    now, ds.array_power);
-  push('battery_soc',    now, ds.battery_soc);
-  push('steering_angle', now, ds.steering_angle);
-  push('acceleration',   now, ds.acceleration);
+  SIGNALS.forEach(sig => { if (ds[sig.field] !== undefined) push(sig.field, now, ds[sig.field]); });
 }
 
-// ─── CARD STRIP COLLAPSE ─────────────────────────────────────────────────────
-function toggleCardStrip() {
-  const wrapper = document.getElementById('cardStripWrapper');
-  const label   = document.getElementById('cardStripToggleLabel');
-  const collapsed = wrapper.classList.toggle('collapsed');
-  label.textContent = collapsed ? 'Show Metrics' : 'Hide Metrics';
-  // allow map to resize after animation
-  setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 320);
-}
-
-// ─── CUSTOM DATETIME PICKER ──────────────────────────────────────────────────
-// Each picker is a <span id="..."> populated with individual numeric segments
-// (Y, M, D, h, m, s). Scroll, drag up/down, or arrow-key to change each part.
-
-const dtState = {};  // id → { y, mo, d, h, mi, s, onChange }
-
+// ─── DATETIME PICKER ─────────────────────────────────────────────────────────
+const dtState = {};
 const DT_SEGS = [
-  { key:'y',  w:42, min:2020, max:2099, pad:4 },
-  { sep:'-' },
-  { key:'mo', w:24, min:1,    max:12,   pad:2 },
-  { sep:'-' },
-  { key:'d',  w:24, min:1,    max:31,   pad:2 },
-  { sep:' ', cls:'dt-sep-space' },
-  { key:'h',  w:24, min:0,    max:23,   pad:2 },
-  { sep:':' },
-  { key:'mi', w:24, min:0,    max:59,   pad:2 },
-  { sep:':' },
+  { key:'y',  w:42, min:2020, max:2099, pad:4 }, { sep:'-' },
+  { key:'mo', w:24, min:1,    max:12,   pad:2 }, { sep:'-' },
+  { key:'d',  w:24, min:1,    max:31,   pad:2 }, { sep:' ', cls:'dt-sep-space' },
+  { key:'h',  w:24, min:0,    max:23,   pad:2 }, { sep:':' },
+  { key:'mi', w:24, min:0,    max:59,   pad:2 }, { sep:':' },
   { key:'s',  w:24, min:0,    max:59,   pad:2 },
 ];
 
 function dtInit(id, onChange) {
-  const wrap = document.getElementById(id);
-  if (!wrap) return;
+  const wrap = document.getElementById(id); if (!wrap) return;
   wrap.innerHTML = '';
   const now = new Date();
-  dtState[id] = { y: now.getFullYear(), mo: now.getMonth()+1, d: now.getDate(),
-                  h: now.getHours(), mi: now.getMinutes(), s: now.getSeconds(),
-                  onChange: onChange || null };
-
+  dtState[id] = { y:now.getFullYear(), mo:now.getMonth()+1, d:now.getDate(), h:now.getHours(), mi:now.getMinutes(), s:now.getSeconds(), onChange: onChange||null };
   DT_SEGS.forEach(def => {
-    if (def.sep !== undefined) {
-      const sp = document.createElement('span');
-      sp.className = def.cls || 'dt-sep';
-      sp.textContent = def.sep;
-      wrap.appendChild(sp);
-      return;
-    }
+    if (def.sep !== undefined) { const sp = document.createElement('span'); sp.className = def.cls||'dt-sep'; sp.textContent = def.sep; wrap.appendChild(sp); return; }
     const inp = document.createElement('input');
-    inp.type = 'number';
-    inp.className = 'dt-seg';
-    inp.style.width = def.w + 'px';
-    inp.dataset.key = def.key;
-    inp.dataset.min = def.min;
-    inp.dataset.max = def.max;
-    inp.dataset.pad = def.pad;
-    inp.value = String(dtState[id][def.key]).padStart(def.pad, '0');
-
-    inp.addEventListener('wheel', e => {
-      e.preventDefault();
-      dtStep(id, inp, e.deltaY < 0 ? 1 : -1);
-    }, { passive: false });
-
-    let dragY = null, dragActive = false;
-    inp.addEventListener('mousedown', e => {
-      dragY = e.clientY; dragActive = false; inp.focus(); e.preventDefault();
-    });
-    inp.addEventListener('mousemove', e => {
-      if (dragY === null) return;
-      const delta = Math.round((dragY - e.clientY) / 5);
-      if (delta !== 0) { dragActive = true; dtStep(id, inp, delta); dragY = e.clientY; }
-    });
-    inp.addEventListener('mouseup', () => { dragY = null; });
-    inp.addEventListener('mouseleave', () => { dragY = null; });
-
-    inp.addEventListener('keydown', e => {
-      if (e.key === 'ArrowUp')   { e.preventDefault(); dtStep(id, inp,  1); }
-      if (e.key === 'ArrowDown') { e.preventDefault(); dtStep(id, inp, -1); }
-    });
-
-    inp.addEventListener('change', () => {
-      const v = parseInt(inp.value);
-      if (!isNaN(v)) {
-        dtState[id][def.key] = Math.max(def.min, Math.min(def.max, v));
-        dtRefresh(id);
-        dtState[id].onChange && dtState[id].onChange();
-      }
-    });
-
+    inp.type='number'; inp.className='dt-seg'; inp.style.width=def.w+'px';
+    inp.dataset.key=def.key; inp.dataset.min=def.min; inp.dataset.max=def.max; inp.dataset.pad=def.pad;
+    inp.value = String(dtState[id][def.key]).padStart(def.pad,'0');
+    inp.addEventListener('wheel', e => { e.preventDefault(); dtStep(id, inp, e.deltaY<0?1:-1); }, {passive:false});
+    let dragY=null;
+    inp.addEventListener('mousedown', e => { dragY=e.clientY; inp.focus(); e.preventDefault(); });
+    inp.addEventListener('mousemove', e => { if(dragY===null) return; const delta=Math.round((dragY-e.clientY)/5); if(delta!==0){dtStep(id,inp,delta);dragY=e.clientY;} });
+    inp.addEventListener('mouseup', ()=>{dragY=null;}); inp.addEventListener('mouseleave', ()=>{dragY=null;});
+    inp.addEventListener('keydown', e=>{if(e.key==='ArrowUp'){e.preventDefault();dtStep(id,inp,1);}if(e.key==='ArrowDown'){e.preventDefault();dtStep(id,inp,-1);}});
+    inp.addEventListener('change', ()=>{ const v=parseInt(inp.value); if(!isNaN(v)){dtState[id][def.key]=Math.max(def.min,Math.min(def.max,v));dtRefresh(id);dtState[id].onChange&&dtState[id].onChange();}});
     wrap.appendChild(inp);
   });
 }
 
 function dtStep(id, inp, delta) {
-  const st = dtState[id]; if (!st) return;
-  const key = inp.dataset.key;
-  const min = parseInt(inp.dataset.min), max = parseInt(inp.dataset.max);
-  const span = max - min + 1;
-  let v = st[key] + delta;
-  v = min + ((v - min) % span + span) % span;
-  st[key] = v;
-  inp.value = String(v).padStart(parseInt(inp.dataset.pad), '0');
-  st.onChange && st.onChange();
+  const st=dtState[id]; if(!st) return;
+  const key=inp.dataset.key, min=parseInt(inp.dataset.min), max=parseInt(inp.dataset.max), span=max-min+1;
+  let v=st[key]+delta; v=min+((v-min)%span+span)%span;
+  st[key]=v; inp.value=String(v).padStart(parseInt(inp.dataset.pad),'0');
+  st.onChange&&st.onChange();
 }
 
 function dtRefresh(id) {
-  const wrap = document.getElementById(id);
-  if (!wrap || !dtState[id]) return;
-  wrap.querySelectorAll('.dt-seg').forEach(inp => {
-    inp.value = String(dtState[id][inp.dataset.key]).padStart(parseInt(inp.dataset.pad), '0');
-  });
+  const wrap=document.getElementById(id); if(!wrap||!dtState[id]) return;
+  wrap.querySelectorAll('.dt-seg').forEach(inp=>{ inp.value=String(dtState[id][inp.dataset.key]).padStart(parseInt(inp.dataset.pad),'0'); });
 }
 
 function dtSet(id, ms) {
-  if (!document.getElementById(id)) return;
-  if (!dtState[id]) dtInit(id, null);
-  const d = new Date(ms);
-  Object.assign(dtState[id], {
-    y: d.getFullYear(), mo: d.getMonth()+1, d: d.getDate(),
-    h: d.getHours(), mi: d.getMinutes(), s: d.getSeconds()
-  });
+  if(!document.getElementById(id)) return;
+  if(!dtState[id]) dtInit(id,null);
+  const d=new Date(ms);
+  Object.assign(dtState[id],{y:d.getFullYear(),mo:d.getMonth()+1,d:d.getDate(),h:d.getHours(),mi:d.getMinutes(),s:d.getSeconds()});
   dtRefresh(id);
 }
 
 function dtGet(id) {
-  const st = dtState[id]; if (!st) return null;
-  return new Date(st.y, st.mo-1, st.d, st.h, st.mi, st.s, 0).getTime();
+  const st=dtState[id]; if(!st) return null;
+  return new Date(st.y,st.mo-1,st.d,st.h,st.mi,st.s,0).getTime();
 }
 
-// ─── TAB SWITCHING ───────────────────────────────────────────────────────────
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
 let activeTab = 'data';
 
 function switchTab(tab) {
   activeTab = tab;
-  document.getElementById('tabData').classList.toggle('active', tab === 'data');
-  document.getElementById('tabCalc').classList.toggle('active', tab === 'calc');
-
-  const dataTab = document.getElementById('dataTab');
-  const calcTab = document.getElementById('calcTab');
+  document.getElementById('tabData').classList.toggle('active', tab==='data');
+  document.getElementById('tabCalc').classList.toggle('active', tab==='calc');
 
   if (tab === 'data') {
-    // restore data tab children visibility
-    document.getElementById('cardStripWrapper').style.display = '';
-    document.getElementById('mainArea').style.display = '';
-    calcTab.classList.remove('active');
-    // resume loop if needed
+    document.getElementById('dataTab').classList.remove('hidden');
+    document.getElementById('calcTab').classList.remove('active');
+    document.getElementById('sidebar').classList.remove('hidden');
+    document.getElementById('sidebarToggle').classList.remove('hidden');
     if (activeFields.size > 0 && !staticMode) startLoop();
     if (leafletMap) leafletMap.invalidateSize();
   } else {
-    // hide data children
-    document.getElementById('cardStripWrapper').style.display = 'none';
-    document.getElementById('mainArea').style.display = 'none';
-    calcTab.classList.add('active');
+    document.getElementById('dataTab').classList.add('hidden');
+    document.getElementById('calcTab').classList.add('active');
+    document.getElementById('sidebar').classList.add('hidden');
+    document.getElementById('sidebarToggle').classList.add('hidden');
     stopLoop();
-    // Init calc pickers if not yet done, then pre-fill
     if (!dtState['dtCalcFrom']) dtInit('dtCalcFrom', null);
     if (!dtState['dtCalcTo'])   dtInit('dtCalcTo',   null);
     prefillCalcInputs();
@@ -1613,240 +1432,123 @@ function switchTab(tab) {
 
 function prefillCalcInputs() {
   const now = Date.now();
-  dtSet('dtCalcFrom', now - windowSec * 1000);
+  dtSet('dtCalcFrom', now - windowSec*1000);
   dtSet('dtCalcTo',   now);
 }
 
-// ─── CALCULATIONS ENGINE ─────────────────────────────────────────────────────
-
-// Interpolate metric value at time t using binary search
+// ─── CALCULATIONS ENGINE ──────────────────────────────────────────────────────
 function metricAt(hist, t) {
-  if (!hist || !hist.length) return null;
-  if (t <= hist[0].t) return hist[0].v;
-  if (t >= hist[hist.length-1].t) return hist[hist.length-1].v;
-  let lo = 0, hi = hist.length - 1;
-  while (lo < hi - 1) {
-    const mid = (lo + hi) >> 1;
-    if (hist[mid].t <= t) lo = mid; else hi = mid;
-  }
-  const frac = (t - hist[lo].t) / (hist[hi].t - hist[lo].t || 1);
-  return hist[lo].v + frac * (hist[hi].v - hist[lo].v);
+  if(!hist||!hist.length) return null;
+  if(t<=hist[0].t) return hist[0].v; if(t>=hist[hist.length-1].t) return hist[hist.length-1].v;
+  let lo=0,hi=hist.length-1;
+  while(lo<hi-1){const mid=(lo+hi)>>1;if(hist[mid].t<=t)lo=mid;else hi=mid;}
+  const frac=(t-hist[lo].t)/(hist[hi].t-hist[lo].t||1);
+  return hist[lo].v+frac*(hist[hi].v-hist[lo].v);
 }
 
-// Integrate a metric over a set of timestamps using trapezoidal rule → result in metric-unit × seconds
 function integrate(hist, tStart, tEnd) {
-  if (!hist || !hist.length) return 0;
-  const pts = hist.filter(p => p.t >= tStart && p.t <= tEnd);
-  if (pts.length < 2) return 0;
-  let sum = 0;
-  for (let i = 1; i < pts.length; i++) {
-    const dt = (pts[i].t - pts[i-1].t) / 1000; // seconds
-    sum += 0.5 * (pts[i-1].v + pts[i].v) * dt;
-  }
+  if(!hist||!hist.length) return 0;
+  const pts=hist.filter(p=>p.t>=tStart&&p.t<=tEnd); if(pts.length<2) return 0;
+  let sum=0;
+  for(let i=1;i<pts.length;i++){const dt=(pts[i].t-pts[i-1].t)/1000;sum+=0.5*(pts[i-1].v+pts[i].v)*dt;}
   return sum;
 }
 
-// Average of metric over [tStart, tEnd]
 function average(hist, tStart, tEnd) {
-  const pts = hist ? hist.filter(p => p.t >= tStart && p.t <= tEnd) : [];
-  if (!pts.length) return null;
-  return pts.reduce((s, p) => s + p.v, 0) / pts.length;
+  const pts=hist?hist.filter(p=>p.t>=tStart&&p.t<=tEnd):[];
+  if(!pts.length) return null;
+  return pts.reduce((s,p)=>s+p.v,0)/pts.length;
 }
 
 function runCalculations() {
-  const statusEl = document.getElementById('calcStatus');
-  const f = dtGet('dtCalcFrom');
-  const t = dtGet('dtCalcTo');
-  if (!f || !t || f >= t) {
-    const flash = id => { const el = document.getElementById(id); if(el){el.style.borderColor='var(--red)'; setTimeout(()=>el.style.borderColor='',1200);} };
-    flash('dtCalcFrom'); flash('dtCalcTo');
-    return;
+  const statusEl=document.getElementById('calcStatus');
+  const f=dtGet('dtCalcFrom'), t=dtGet('dtCalcTo');
+  if(!f||!t||f>=t){
+    const flash=id=>{const el=document.getElementById(id);if(el){el.style.borderColor='var(--red)';setTimeout(()=>el.style.borderColor='',1200);}};
+    flash('dtCalcFrom');flash('dtCalcTo'); return;
   }
+  statusEl.textContent='Computing…'; statusEl.classList.remove('hidden');
 
-  statusEl.textContent = 'Computing…';
-  statusEl.classList.remove('hidden');
+  const hists={};
+  SIGNALS.forEach(m=>{hists[m.field]=history[m.field].filter(p=>p.t>=f&&p.t<=t);});
+  const body=document.getElementById('calcBody');
+  const durSec=(t-f)/1000;
+  const avgSpeed=average(hists['VehicleVelocity'],f,t);
+  const socStart=hists['SOC'].length?hists['SOC'][0].v:null;
+  const socEnd=hists['SOC'].length?hists['SOC'][hists['SOC'].length-1].v:null;
+  const deltaSoc=(socStart!==null&&socEnd!==null)?(socStart-socEnd):null;
+  const motorEnergyKWh=integrate(hists['MotorPower'],f,t)/3600000;
+  const packEnergyKWh =integrate(hists['PackPower'], f,t)/3600000;
+  const avgMotor=average(hists['MotorPower'],f,t);
+  const avgPack =average(hists['PackPower'], f,t);
+  const fmt=(v,dec,fb='—')=>v!==null&&!isNaN(v)?v.toFixed(dec):fb;
 
-  // filter data to range
-  const gps = gpsHistory.filter(p => p.t >= f && p.t <= t);
-  const hists = {};
-  METRICS.forEach(m => { hists[m.field] = history[m.field].filter(p => p.t >= f && p.t <= t); });
-
-  const body = document.getElementById('calcBody');
-
-  // ── build overall stats ──
-  const durSec   = (t - f) / 1000;
-  const avgSpeed = average(hists['speed'], f, t);
-  const socStart = hists['battery_soc'].length ? hists['battery_soc'][0].v : null;
-  const socEnd   = hists['battery_soc'].length ? hists['battery_soc'][hists['battery_soc'].length-1].v : null;
-  const deltaSoc = (socStart !== null && socEnd !== null) ? (socStart - socEnd) : null;
-  // Energy: integrate motor_power (kW) over time (s) → kWh
-  const motorEnergyKWh = integrate(hists['motor_power'], f, t) / 3600;
-  const arrayEnergyKWh = integrate(hists['array_power'], f, t) / 3600;
-  const netEnergyKWh   = motorEnergyKWh - arrayEnergyKWh;
-  const avgMotor = average(hists['motor_power'], f, t);
-  const avgArray = average(hists['array_power'], f, t);
-
-  // ── render ──
-  const fmt = (v, dec, fallback='—') => v !== null && !isNaN(v) ? v.toFixed(dec) : fallback;
-
-  body.innerHTML = `
+  body.innerHTML=`
     <div class="calc-section-title">Summary</div>
     <div class="stat-grid">
-      <div class="stat-card" style="--card-color:#60a5fa">
-        <div class="stat-card-label">Duration</div>
-        <div class="stat-card-value">${fmt(durSec/60,1)}<span class="stat-card-unit">min</span></div>
-      </div>
-      <div class="stat-card" style="--card-color:#60a5fa">
-        <div class="stat-card-label">Avg Speed</div>
-        <div class="stat-card-value">${fmt(avgSpeed,1)}<span class="stat-card-unit">km/h</span></div>
-      </div>
-      <div class="stat-card" style="--card-color:#4caf7d">
-        <div class="stat-card-label">SOC Start</div>
-        <div class="stat-card-value">${fmt(socStart,1)}<span class="stat-card-unit">%</span></div>
-      </div>
-      <div class="stat-card" style="--card-color:#4caf7d">
-        <div class="stat-card-label">SOC End</div>
-        <div class="stat-card-value">${fmt(socEnd,1)}<span class="stat-card-unit">%</span></div>
-      </div>
-      <div class="stat-card" style="--card-color:${deltaSoc !== null && deltaSoc > 0 ? 'var(--red)' : 'var(--green)'}">
-        <div class="stat-card-label">Δ SOC</div>
-        <div class="stat-card-value">${deltaSoc !== null ? (deltaSoc > 0 ? '−' : '+') + fmt(Math.abs(deltaSoc),1) : '—'}<span class="stat-card-unit">%</span></div>
-      </div>
-      <div class="stat-card" style="--card-color:#e05c4a">
-        <div class="stat-card-label">Motor Energy</div>
-        <div class="stat-card-value">${fmt(motorEnergyKWh*1000,1)}<span class="stat-card-unit">Wh</span></div>
-      </div>
-      <div class="stat-card" style="--card-color:#f0a500">
-        <div class="stat-card-label">Array Energy</div>
-        <div class="stat-card-value">${fmt(arrayEnergyKWh*1000,1)}<span class="stat-card-unit">Wh</span></div>
-      </div>
-      <div class="stat-card" style="--card-color:${netEnergyKWh > 0 ? 'var(--red)' : 'var(--green)'}">
-        <div class="stat-card-label">Net Energy</div>
-        <div class="stat-card-value">${fmt(netEnergyKWh*1000,1)}<span class="stat-card-unit">Wh</span></div>
-      </div>
-      <div class="stat-card" style="--card-color:#e05c4a">
-        <div class="stat-card-label">Avg Motor Power</div>
-        <div class="stat-card-value">${fmt(avgMotor,2)}<span class="stat-card-unit">kW</span></div>
-      </div>
-      <div class="stat-card" style="--card-color:#f0a500">
-        <div class="stat-card-label">Avg Array Power</div>
-        <div class="stat-card-value">${fmt(avgArray,2)}<span class="stat-card-unit">kW</span></div>
-      </div>
+      <div class="stat-card" style="--card-color:#60a5fa"><div class="stat-card-label">Duration</div><div class="stat-card-value">${fmt(durSec/60,1)}<span class="stat-card-unit">min</span></div></div>
+      <div class="stat-card" style="--card-color:#60a5fa"><div class="stat-card-label">Avg Speed</div><div class="stat-card-value">${fmt(avgSpeed,2)}<span class="stat-card-unit">m/s</span></div></div>
+      <div class="stat-card" style="--card-color:#4caf7d"><div class="stat-card-label">SOC Start</div><div class="stat-card-value">${fmt(socStart!==null?socStart*100:null,1)}<span class="stat-card-unit">%</span></div></div>
+      <div class="stat-card" style="--card-color:#4caf7d"><div class="stat-card-label">SOC End</div><div class="stat-card-value">${fmt(socEnd!==null?socEnd*100:null,1)}<span class="stat-card-unit">%</span></div></div>
+      <div class="stat-card" style="--card-color:${deltaSoc!==null&&deltaSoc>0?'var(--red)':'var(--green)'}"><div class="stat-card-label">Δ SOC</div><div class="stat-card-value">${deltaSoc!==null?(deltaSoc>0?'−':'+')+fmt(Math.abs(deltaSoc)*100,1):'—'}<span class="stat-card-unit">%</span></div></div>
+      <div class="stat-card" style="--card-color:#e05c4a"><div class="stat-card-label">Motor Energy</div><div class="stat-card-value">${fmt(motorEnergyKWh*1000,1)}<span class="stat-card-unit">Wh</span></div></div>
+      <div class="stat-card" style="--card-color:#f0a500"><div class="stat-card-label">Pack Energy</div><div class="stat-card-value">${fmt(packEnergyKWh*1000,1)}<span class="stat-card-unit">Wh</span></div></div>
+      <div class="stat-card" style="--card-color:#e05c4a"><div class="stat-card-label">Avg Motor Power</div><div class="stat-card-value">${fmt(avgMotor!==null?avgMotor/1000:null,2)}<span class="stat-card-unit">kW</span></div></div>
+      <div class="stat-card" style="--card-color:#f0a500"><div class="stat-card-label">Avg Pack Power</div><div class="stat-card-value">${fmt(avgPack!==null?avgPack/1000:null,2)}<span class="stat-card-unit">kW</span></div></div>
     </div>
-
     <div class="calc-section-title">Time-Series Graphs</div>
     <div class="mini-charts-grid" id="miniChartsGrid"></div>
   `;
-
-  // draw mini charts
   drawMiniCharts(f, t);
-
-  statusEl.textContent = 'Done';
-  setTimeout(() => statusEl.classList.add('hidden'), 2000);
+  statusEl.textContent='Done'; setTimeout(()=>statusEl.classList.add('hidden'),2000);
 }
 
-// ─── MINI CHARTS ─────────────────────────────────────────────────────────────
 function drawMiniCharts(tFrom, tTo) {
-  const grid = document.getElementById('miniChartsGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-
-  METRICS.forEach(m => {
-    const pts = history[m.field].filter(p => p.t >= tFrom && p.t <= tTo);
-
-    const card = document.createElement('div');
-    card.className = 'mini-chart-card';
-    card.innerHTML = `
-      <div class="mini-chart-title">
-        <span class="dot" style="background:${m.color}"></span>
-        ${m.label} <span style="font-size:10px;color:var(--muted);margin-left:auto">${m.unit}</span>
-      </div>
-      <canvas class="mini-chart-canvas" width="280" height="120"></canvas>
-    `;
+  const grid=document.getElementById('miniChartsGrid'); if(!grid) return;
+  grid.innerHTML='';
+  SIGNALS.forEach(m=>{
+    const pts=history[m.field].filter(p=>p.t>=tFrom&&p.t<=tTo);
+    const card=document.createElement('div'); card.className='mini-chart-card';
+    card.innerHTML=`<div class="mini-chart-title"><span class="dot" style="background:${m.color}"></span>${m.label}<span style="font-size:10px;color:var(--muted);margin-left:auto">${m.unit}</span></div><canvas class="mini-chart-canvas" width="280" height="120"></canvas>`;
     grid.appendChild(card);
-
-    requestAnimationFrame(() => {
-      const canvas = card.querySelector('canvas');
-      const dpr = window.devicePixelRatio || 1;
-      const W = canvas.offsetWidth || 280, H = 120;
-      canvas.width = W * dpr; canvas.height = H * dpr;
-      const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
-
-      const PAD = { t:8, b:20, l:38, r:8 };
-      const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
-      const LABEL = '#7a8fa3';
-      const FONT  = '9px Poppins,sans-serif';
-
+    requestAnimationFrame(()=>{
+      const canvas=card.querySelector('canvas');
+      const dpr=window.devicePixelRatio||1;
+      const W=canvas.offsetWidth||280,H=120;
+      canvas.width=W*dpr;canvas.height=H*dpr;
+      const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+      const PAD={t:8,b:20,l:38,r:8};
+      const cW=W-PAD.l-PAD.r,cH=H-PAD.t-PAD.b;
+      const LABEL='#7a8fa3',FONT='9px Poppins,sans-serif';
       ctx.clearRect(0,0,W,H);
-
-      if (pts.length < 2) {
-        ctx.fillStyle = LABEL; ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.font = '10px Poppins,sans-serif';
-        ctx.fillText('No data', PAD.l + cW/2, PAD.t + cH/2);
-        return;
-      }
-
-      const vs = pts.map(p=>p.v);
-      const yMin = Math.min(...vs), yMax = Math.max(...vs);
-      const yRange = yMax - yMin || 1;
-      // Use actual data bounds for x-axis so the line always fills the chart width
-      const tActualFrom = pts[0].t;
-      const tActualTo   = pts[pts.length - 1].t;
-      const tSpan = tActualTo - tActualFrom || 1;
-
-      const toX = t => PAD.l + ((t - tActualFrom) / tSpan) * cW;
-      const toY = v => PAD.t + cH - ((v - yMin) / yRange) * cH;
-
-      // grid
-      ctx.strokeStyle = '#ffffff0a'; ctx.lineWidth = .5;
-      for (let i=0;i<=4;i++) {
-        const y = PAD.t + (i/4)*cH;
-        ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l+cW, y); ctx.stroke();
-      }
-
-      // y labels
-      ctx.font = FONT; ctx.fillStyle = LABEL; ctx.textAlign='right'; ctx.textBaseline='middle';
-      for (let i=0;i<=4;i++) {
-        const v = yMin + (yRange/4)*(4-i);
-        ctx.fillText(v.toFixed(m.decimals<=1?1:2), PAD.l-3, PAD.t+(i/4)*cH);
-      }
-
-      // x labels — adapt tick count and format to actual data span
-      ctx.textAlign='center'; ctx.textBaseline='top';
-      const xN = Math.min(4, Math.max(1, Math.floor(cW/55)));
-      const showSecs = tSpan < 90000; // under 90s: show HH:MM:SS
-      for (let i=0;i<=xN;i++) {
-        const tt = tActualFrom + (i/xN)*tSpan;
-        const d = new Date(tt);
-        const lbl = showSecs
-          ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
-          : `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-        ctx.fillText(lbl, toX(tt), PAD.t+cH+3);
-      }
-
-      // axis
-      ctx.strokeStyle = '#ffffff18'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(PAD.l,PAD.t); ctx.lineTo(PAD.l,PAD.t+cH); ctx.lineTo(PAD.l+cW,PAD.t+cH); ctx.stroke();
-
-      // fill
-      ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
-      pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
-      ctx.lineTo(toX(pts[pts.length-1].t), PAD.t+cH);
-      ctx.lineTo(toX(pts[0].t), PAD.t+cH);
-      ctx.closePath(); ctx.fillStyle = m.color+'18'; ctx.fill();
-
-      // line
-      ctx.beginPath(); ctx.moveTo(toX(pts[0].t), toY(pts[0].v));
-      pts.slice(1).forEach(p => ctx.lineTo(toX(p.t), toY(p.v)));
-      ctx.strokeStyle = m.color; ctx.lineWidth=1.5;
-      ctx.lineJoin='round'; ctx.lineCap='round'; ctx.stroke();
+      if(pts.length<2){ctx.fillStyle=LABEL;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='10px Poppins,sans-serif';ctx.fillText('No data',PAD.l+cW/2,PAD.t+cH/2);return;}
+      const vs=pts.map(p=>p.v);
+      const yMin=Math.min(...vs),yMax=Math.max(...vs),yRange=yMax-yMin||1;
+      const tA=pts[0].t,tB=pts[pts.length-1].t,tSpan=tB-tA||1;
+      const toX=t=>PAD.l+((t-tA)/tSpan)*cW;
+      const toY=v=>PAD.t+cH-((v-yMin)/yRange)*cH;
+      ctx.strokeStyle='#ffffff0a';ctx.lineWidth=.5;
+      for(let i=0;i<=4;i++){const y=PAD.t+(i/4)*cH;ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(PAD.l+cW,y);ctx.stroke();}
+      ctx.font=FONT;ctx.fillStyle=LABEL;ctx.textAlign='right';ctx.textBaseline='middle';
+      for(let i=0;i<=4;i++){const v=yMin+(yRange/4)*(4-i);ctx.fillText(v.toFixed(m.decimals<=1?1:2),PAD.l-3,PAD.t+(i/4)*cH);}
+      ctx.textAlign='center';ctx.textBaseline='top';
+      const xN=Math.min(4,Math.max(1,Math.floor(cW/55)));
+      const showSecs=tSpan<90000;
+      for(let i=0;i<=xN;i++){const tt=tA+(i/xN)*tSpan;const d=new Date(tt);const lbl=showSecs?`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`:`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;ctx.fillText(lbl,toX(tt),PAD.t+cH+3);}
+      ctx.strokeStyle='#ffffff18';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PAD.l,PAD.t);ctx.lineTo(PAD.l,PAD.t+cH);ctx.lineTo(PAD.l+cW,PAD.t+cH);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(toX(pts[0].t),toY(pts[0].v));pts.slice(1).forEach(p=>ctx.lineTo(toX(p.t),toY(p.v)));ctx.lineTo(toX(pts[pts.length-1].t),PAD.t+cH);ctx.lineTo(toX(pts[0].t),PAD.t+cH);ctx.closePath();ctx.fillStyle=m.color+'18';ctx.fill();
+      ctx.beginPath();ctx.moveTo(toX(pts[0].t),toY(pts[0].v));pts.slice(1).forEach(p=>ctx.lineTo(toX(p.t),toY(p.v)));ctx.strokeStyle=m.color;ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
     });
   });
 }
 
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+buildSidebar();
 setInterval(dummyTick, 500);
-window.addEventListener('resize', () => { if (activeField || activeFields.size > 0) render(); if (leafletMap) leafletMap.invalidateSize(); });
-
+window.addEventListener('resize', () => {
+  if (leafletMap) leafletMap.invalidateSize();
+  if (document.getElementById('plotCanvas') && activeFields.size > 0) render();
+});
 </script>
 </body>
 </html>
