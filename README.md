@@ -7,4 +7,6 @@ The DI Can:
 - Graph timeseries data on a map using lat-long coordinates
 - Calculate aggregate statistics for given timeframes and share all related timeseries graphs
 
+Test it out here: https://ellailan.github.io/solar-di/
+
 <img width="1920" height="1080" alt="ella&#39;s website mockup don&#39;t touch!!" src="https://github.com/user-attachments/assets/9d4706fa-95ba-4cac-8e93-8cde13fde19b" />
