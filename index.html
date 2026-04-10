@@ -131,7 +131,66 @@ header { display:flex; align-items:center; gap:12px; padding:0 16px; height:36px
 .vital-value { font-size:15px; font-weight:700; color:var(--text); line-height:1; }
 .vital-unit { font-size:9px; color:var(--muted); }
 
-/* ── VIEW TOGGLE (Graph / Map) ── */
+/* ══════════════════════════════════════════════
+   OVERVIEW TAB
+══════════════════════════════════════════════ */
+.ov-tab {
+  flex:1; min-height:0; overflow:hidden;
+  background:var(--navy);
+  display:none;
+  align-items:center; justify-content:center;
+}
+.ov-tab.active { display:flex; }
+
+.ov-layout {
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: auto auto;
+  gap:10px;
+  width:min(96vw, 1000px);
+}
+.ov-layout .ov-card:nth-child(5) { grid-column: span 1; }
+.ov-layout .ov-card:nth-child(6) { grid-column: span 1; }
+.ov-layout .ov-card:nth-child(7) { grid-column: span 2; }
+
+.ov-card {
+  background:var(--navy2); border:1px solid var(--border);
+  border-radius:8px; padding:14px 16px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.ov-card-label {
+  font-size:9px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--gold-dim);
+}
+
+.ov-big { display:flex; align-items:baseline; gap:5px; }
+.ov-big-val { font-size:38px; font-weight:800; line-height:1; color:var(--text); }
+.ov-big-unit { font-size:12px; color:var(--muted); }
+
+.ov-row-stats { display:flex; gap:0; }
+.ov-stat { display:flex; flex-direction:column; align-items:center; padding:4px 12px; border-right:1px solid var(--border); flex:1; }
+.ov-stat:last-child { border-right:none; }
+.ov-stat:first-child { padding-left:0; }
+.ov-stat-label { font-size:9px; color:var(--muted); font-weight:500; text-align:center; margin-bottom:3px; white-space:nowrap; }
+.ov-stat-val { font-size:20px; font-weight:800; color:var(--text); line-height:1; }
+.ov-stat-unit { font-size:9px; color:var(--muted); margin-top:2px; }
+
+.ov-soc-bar-bg { height:10px; background:var(--navy4); border-radius:5px; overflow:hidden; }
+.ov-soc-bar-fill { height:100%; border-radius:5px; background:linear-gradient(90deg,#e05c4a,#c9a84c 40%,#4caf7d 80%); transition:width .5s ease; }
+.ov-soc-bar-labels { display:flex; justify-content:space-between; font-size:9px; color:var(--muted); margin-top:3px; }
+
+.ov-track-bar-bg { height:5px; background:var(--navy4); border-radius:3px; overflow:hidden; margin-top:4px; }
+.ov-track-bar-fill { height:100%; background:linear-gradient(90deg,#4caf7d,#c9a84c); border-radius:3px; transition:width .5s ease; }
+
+.ov-pills { display:flex; align-items:center; gap:8px; }
+.ov-state-pill { display:flex; align-items:center; gap:5px; background:var(--navy3); border:1px solid var(--border2); border-radius:20px; padding:3px 10px; font-size:10px; font-weight:600; color:var(--muted); transition:background .2s,border-color .2s,color .2s; }
+.ov-state-pill.active-brake { background:#e05c4a18; border-color:#e05c4a50; color:#e05c4a; }
+.ov-state-pill.active-regen { background:#4caf7d18; border-color:#4caf7d50; color:#4caf7d; }
+.ov-state-dot { width:6px; height:6px; border-radius:50%; background:var(--muted); flex-shrink:0; transition:background .2s; }
+.active-brake .ov-state-dot { background:#e05c4a; box-shadow:0 0 4px #e05c4a80; }
+.active-regen .ov-state-dot { background:#4caf7d; box-shadow:0 0 4px #4caf7d80; }
+
+
 .view-toggle {
   display:flex; align-items:center; gap:0;
   background:var(--navy3); border:1px solid var(--border2); border-radius:5px;
@@ -400,7 +459,8 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px
   <header>
     <div class="logo">UBC <span>Solar</span></div>
     <nav class="top-tabs">
-      <button class="top-tab active" id="tabData" onclick="switchTab('data')">Data</button>
+      <button class="top-tab active" id="tabOverview" onclick="switchTab('overview')">Overview</button>
+      <button class="top-tab" id="tabData" onclick="switchTab('data')">Data</button>
       <button class="top-tab" id="tabCalc" onclick="switchTab('calc')">Calculations</button>
     </nav>
     <!-- Graph / Map view toggle — only visible in Data tab -->
@@ -447,8 +507,139 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px
     <!-- ── MAIN CONTENT ── -->
     <div id="mainContent">
 
+      <!-- Overview tab -->
+      <div id="overviewTab" class="ov-tab">
+        <div class="ov-layout">
+
+          <!-- 1: SOC -->
+          <div class="ov-card">
+            <div class="ov-card-label">State of Charge</div>
+            <div class="ov-big">
+              <span class="ov-big-val" id="ovSocPct" style="color:#4caf7d">—</span>
+              <span class="ov-big-unit">%</span>
+            </div>
+            <div class="ov-soc-bar-bg"><div class="ov-soc-bar-fill" id="ovSocFill" style="width:0%"></div></div>
+            <div class="ov-soc-bar-labels"><span style="color:#e05c4a">20%</span><span style="color:#c9a84c">50%</span><span style="color:#4caf7d">100%</span></div>
+          </div>
+
+          <!-- 2: Speed -->
+          <div class="ov-card">
+            <div class="ov-card-label">Speed</div>
+            <div class="ov-big">
+              <span class="ov-big-val" id="ovSpeed" style="color:#60a5fa">—</span>
+              <span class="ov-big-unit">m/s</span>
+            </div>
+            <div style="font-size:13px;color:var(--muted);"><span id="ovSpeedKmh">—</span> km/h</div>
+          </div>
+
+          <!-- 3: Lap & Track -->
+          <div class="ov-card">
+            <div class="ov-card-label">Lap &amp; Position</div>
+            <div class="ov-big">
+              <span class="ov-big-val" id="ovLap" style="color:#f472b6">—</span>
+              <span class="ov-big-unit">lap</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted);">Track: <span id="ovTrackDist" style="color:var(--text)">—</span> / 5040 m</div>
+            <div class="ov-track-bar-bg"><div class="ov-track-bar-fill" id="ovTrackFill" style="width:0%"></div></div>
+          </div>
+
+          <!-- 4: Pack -->
+          <div class="ov-card">
+            <div class="ov-card-label">Battery</div>
+            <div class="ov-row-stats">
+              <div class="ov-stat">
+                <div class="ov-stat-label">Voltage</div>
+                <div class="ov-stat-val" id="ovPackVoltage" style="color:#60a5fa">—</div>
+                <div class="ov-stat-unit">V</div>
+              </div>
+              <div class="ov-stat">
+                <div class="ov-stat-label">Current</div>
+                <div class="ov-stat-val" id="ovPackCurrent" style="color:#60a5fa">—</div>
+                <div class="ov-stat-unit">A</div>
+              </div>
+              <div class="ov-stat">
+                <div class="ov-stat-label">Weakest Cell</div>
+                <div class="ov-stat-val" id="ovWeakCell">—</div>
+                <div class="ov-stat-unit">V</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5: Power -->
+          <div class="ov-card">
+            <div class="ov-card-label">Power</div>
+            <div class="ov-row-stats">
+              <div class="ov-stat">
+                <div class="ov-stat-label">Pack</div>
+                <div class="ov-stat-val" id="ovPackPower">—</div>
+                <div class="ov-stat-unit">W</div>
+              </div>
+              <div class="ov-stat">
+                <div class="ov-stat-label">Motor</div>
+                <div class="ov-stat-val" id="ovMotorPower">—</div>
+                <div class="ov-stat-unit">W</div>
+              </div>
+            </div>
+            <div class="ov-pills">
+              <div class="ov-state-pill" id="ovBrakePill"><span class="ov-state-dot" id="ovBrakeDot"></span><span id="ovBrakeLabel">Brake OFF</span></div>
+              <div class="ov-state-pill" id="ovRegenPill"><span class="ov-state-dot" id="ovRegenDot"></span><span id="ovRegenLabel">Regen OFF</span></div>
+            </div>
+          </div>
+
+          <!-- 6: Solar & Efficiency -->
+          <div class="ov-card">
+            <div class="ov-card-label">Solar &amp; Efficiency</div>
+            <div class="ov-row-stats">
+              <div class="ov-stat">
+                <div class="ov-stat-label">GHI</div>
+                <div class="ov-stat-val" id="ovGHI" style="color:#c9a84c">—</div>
+                <div class="ov-stat-unit">W/m²</div>
+              </div>
+              <div class="ov-stat">
+                <div class="ov-stat-label">Eff 5-min</div>
+                <div class="ov-stat-val" id="ovEff5m" style="color:#a78bfa">—</div>
+                <div class="ov-stat-unit">J/m</div>
+              </div>
+              <div class="ov-stat">
+                <div class="ov-stat-label">Eff 1-hr</div>
+                <div class="ov-stat-val" id="ovEff1h" style="color:#a78bfa">—</div>
+                <div class="ov-stat-unit">J/m</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7: Weather -->
+          <div class="ov-card">
+            <div class="ov-card-label">Weather</div>
+            <div class="ov-row-stats">
+              <div class="ov-stat">
+                <div class="ov-stat-label">Air Temp</div>
+                <div class="ov-stat-val" id="ovAirTemp" style="color:#38bdf8">—</div>
+                <div class="ov-stat-unit">°C</div>
+              </div>
+              <div class="ov-stat">
+                <div class="ov-stat-label">Wind</div>
+                <div class="ov-stat-val" id="ovWindSpd" style="color:#38bdf8">—</div>
+                <div class="ov-stat-unit">m/s</div>
+              </div>
+              <div class="ov-stat">
+                <div class="ov-stat-label">Wind Dir</div>
+                <div class="ov-stat-val" id="ovWindDir" style="color:#38bdf8">—</div>
+                <div class="ov-stat-unit">°</div>
+              </div>
+              <div class="ov-stat">
+                <div class="ov-stat-label">Zenith</div>
+                <div class="ov-stat-val" id="ovZenith" style="color:#38bdf8">—</div>
+                <div class="ov-stat-unit">°</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Data tab -->
-      <div id="dataTab">
+      <div id="dataTab" class="hidden">
         <div id="mainArea">
           <div class="plot-panel" id="plotPanel">
             <div class="plot-empty">
@@ -1486,18 +1677,29 @@ function setDataView(view) {
 }
 
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
-let activeTab = 'data';
+let activeTab = 'overview';
 
 function switchTab(tab) {
   activeTab = tab;
+  document.getElementById('tabOverview').classList.toggle('active', tab==='overview');
   document.getElementById('tabData').classList.toggle('active', tab==='data');
   document.getElementById('tabCalc').classList.toggle('active', tab==='calc');
   document.getElementById('viewToggle').classList.toggle('hidden', tab!=='data');
 
-  if (tab === 'data') {
+  // hide all panels
+  document.getElementById('overviewTab').classList.remove('active');
+  document.getElementById('dataTab').classList.add('hidden');
+  document.getElementById('calcTab').classList.remove('active');
+  document.getElementById('sidebar').classList.add('hidden');
+  document.getElementById('sidebarToggle').classList.add('hidden');
+
+  if (tab === 'overview') {
+    document.getElementById('overviewTab').classList.add('active');
+    stopLoop();
+    startOverviewLoop();
+  } else if (tab === 'data') {
+    stopOverviewLoop();
     document.getElementById('dataTab').classList.remove('hidden');
-    document.getElementById('calcTab').classList.remove('active');
-    // Restore sidebar only in graph view
     if (currentDataView === 'graph') {
       document.getElementById('sidebar').classList.remove('hidden');
       document.getElementById('sidebarToggle').classList.remove('hidden');
@@ -1505,10 +1707,8 @@ function switchTab(tab) {
     if (activeFields.size > 0 && !staticMode) startLoop();
     if (leafletMap) leafletMap.invalidateSize();
   } else {
-    document.getElementById('dataTab').classList.add('hidden');
+    stopOverviewLoop();
     document.getElementById('calcTab').classList.add('active');
-    document.getElementById('sidebar').classList.add('hidden');
-    document.getElementById('sidebarToggle').classList.add('hidden');
     stopLoop();
     if (!dtState['dtCalcFrom']) dtInit('dtCalcFrom', null);
     if (!dtState['dtCalcTo'])   dtInit('dtCalcTo',   null);
@@ -1628,9 +1828,88 @@ function drawMiniCharts(tFrom, tTo) {
   });
 }
 
+// ─── OVERVIEW ENGINE ──────────────────────────────────────────────────────────
+let ovRafId = null;
+
+function startOverviewLoop() { if (!ovRafId) ovRafId = requestAnimationFrame(ovLoop); }
+function stopOverviewLoop()  { if (ovRafId) { cancelAnimationFrame(ovRafId); ovRafId = null; } }
+function ovLoop() { try { renderOverview(); } catch(e) { console.error('overview error', e); } ovRafId = requestAnimationFrame(ovLoop); }
+
+function ovLast(field) {
+  const h = history[field]; return (h && h.length) ? h[h.length-1].v : null;
+}
+
+function ovSet(id, text) {
+  const el = document.getElementById(id); if (el) el.textContent = text;
+}
+function ovFmt(v, dec) { return (v !== null && !isNaN(v)) ? v.toFixed(dec) : '—'; }
+
+function renderOverview() {
+  const fmt = ovFmt;
+
+  // SOC
+  const soc = ovLast('SOC');
+  const socPct = soc !== null ? soc * 100 : null;
+  const socColor = socPct === null ? 'var(--text)' : socPct < 20 ? '#e05c4a' : socPct < 50 ? '#c9a84c' : '#4caf7d';
+  const socEl = document.getElementById('ovSocPct');
+  if (socEl) { socEl.textContent = socPct !== null ? socPct.toFixed(1) : '—'; socEl.style.color = socColor; }
+  const socFill = document.getElementById('ovSocFill');
+  if (socFill) socFill.style.width = socPct !== null ? Math.max(0,Math.min(100,socPct)) + '%' : '0%';
+
+  // Speed
+  const spd = ovLast('VehicleVelocity');
+  const spdEl = document.getElementById('ovSpeed');
+  if (spdEl) spdEl.textContent = fmt(spd, 1);
+  ovSet('ovSpeedKmh', spd !== null ? (spd * 3.6).toFixed(1) : '—');
+
+  // Lap & Track
+  ovSet('ovLap', ovLast('LapIndex') !== null ? Math.round(ovLast('LapIndex')) : '—');
+  ovSet('ovTrackDist', ovLast('TrackDistSpreadsheet') !== null ? Math.round(ovLast('TrackDistSpreadsheet')) : '—');
+  const trackPct = ovLast('TrackIndex') !== null ? Math.max(0, Math.min(100, ovLast('TrackIndex') * 100)) : 0;
+  const trackFillEl = document.getElementById('ovTrackFill');
+  if (trackFillEl) trackFillEl.style.width = trackPct + '%';
+
+  // Battery
+  ovSet('ovPackVoltage', fmt(ovLast('TotalPackVoltage'), 1));
+  ovSet('ovPackCurrent', fmt(ovLast('PackCurrent'), 1));
+  const wv = ovLast('VoltageofLeast');
+  const wcEl = document.getElementById('ovWeakCell');
+  if (wcEl) { wcEl.textContent = fmt(wv, 2); wcEl.style.color = wv === null ? 'var(--text)' : wv < 3.0 ? '#e05c4a' : wv < 3.4 ? '#c9a84c' : '#4caf7d'; }
+
+  // Power
+  const pp = ovLast('PackPower'), mp = ovLast('MotorPower');
+  const ppEl = document.getElementById('ovPackPower');
+  if (ppEl) { ppEl.textContent = pp !== null ? (Math.abs(pp) >= 1000 ? (pp/1000).toFixed(1)+'k' : Math.round(pp)) : '—'; ppEl.style.color = pp === null ? 'var(--text)' : pp > 500 ? '#e05c4a' : pp < -200 ? '#4caf7d' : 'var(--muted)'; }
+  const mpEl = document.getElementById('ovMotorPower');
+  if (mpEl) { mpEl.textContent = mp !== null ? (Math.abs(mp) >= 1000 ? (mp/1000).toFixed(1)+'k' : Math.round(mp)) : '—'; mpEl.style.color = mp === null ? 'var(--text)' : mp > 500 ? '#e05c4a' : mp < -200 ? '#4caf7d' : 'var(--muted)'; }
+
+  // Drive state pills
+  const brake = ovLast('MechBrakePressed');
+  const regen = mp !== null && mp < -100;
+  const brakePill = document.getElementById('ovBrakePill');
+  if (brakePill) brakePill.className = 'ov-state-pill' + (brake ? ' active-brake' : '');
+  ovSet('ovBrakeLabel', 'Brake ' + (brake ? 'ON' : 'OFF'));
+  const regenPill = document.getElementById('ovRegenPill');
+  if (regenPill) regenPill.className = 'ov-state-pill' + (regen ? ' active-regen' : '');
+  ovSet('ovRegenLabel', 'Regen ' + (regen ? 'ON' : 'OFF'));
+
+  // Solar & Efficiency
+  ovSet('ovGHI', fmt(ovLast('GHI'), 0));
+  ovSet('ovEff5m', fmt(ovLast('Efficiency5Minute'), 0));
+  ovSet('ovEff1h', fmt(ovLast('Efficiency1Hour'), 0));
+
+  // Weather
+  ovSet('ovAirTemp', fmt(ovLast('AirTemperature'), 1));
+  ovSet('ovWindSpd', fmt(ovLast('WindSpeed'), 1));
+  ovSet('ovWindDir', fmt(ovLast('WindDirection'), 0));
+  ovSet('ovZenith',  fmt(ovLast('Zenith'), 0));
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 buildSidebar();
 setInterval(dummyTick, 500);
+// Boot into Overview
+switchTab('overview');
 window.addEventListener('resize', () => {
   if (leafletMap) leafletMap.invalidateSize();
   if (document.getElementById('plotCanvas') && activeFields.size > 0) render();
