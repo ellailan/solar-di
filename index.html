@@ -418,17 +418,97 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px
   flex:1; overflow-y:auto; padding:20px 20px 32px; background:var(--navy);
 }
 .calc-empty { height:100%; display:flex; align-items:center; justify-content:center; }
+
+/* ── COLLAPSIBLE SECTIONS ── */
+.calc-section {
+  margin-bottom:12px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--navy2);
+}
+.calc-section-header {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 16px; cursor:pointer; user-select:none;
+  background:var(--navy2); transition:background .12s;
+  border-bottom:1px solid transparent;
+}
+.calc-section-header:hover { background:var(--navy3); }
+.calc-section.open .calc-section-header { border-bottom-color:var(--border); }
 .calc-section-title {
   font-size:11px; font-weight:700; color:var(--gold);
-  letter-spacing:.08em; text-transform:uppercase;
-  margin:24px 0 12px; border-bottom:1px solid var(--border); padding-bottom:6px;
+  letter-spacing:.08em; text-transform:uppercase; flex:1;
 }
-.calc-section-title:first-child { margin-top:0; }
+.calc-section-chevron {
+  color:var(--muted); transition:transform .2s; flex-shrink:0;
+}
+.calc-section.open .calc-section-chevron { transform:rotate(90deg); }
+.calc-section-body { display:none; padding:14px 16px 16px; }
+.calc-section.open .calc-section-body { display:block; }
+
+/* ── LAP MODE TOOLBAR ── */
+.calc-range-mode {
+  display:flex; align-items:center; gap:0;
+  border:1px solid var(--border2); border-radius:5px; overflow:hidden; flex-shrink:0;
+}
+.calc-mode-btn {
+  background:transparent; border:none; color:var(--muted); font-family:var(--font);
+  font-size:11px; font-weight:600; padding:4px 12px; cursor:pointer; letter-spacing:.03em;
+  transition:background .15s, color .15s; white-space:nowrap;
+}
+.calc-mode-btn + .calc-mode-btn { border-left:1px solid var(--border2); }
+.calc-mode-btn.on { background:var(--gold-bg); color:var(--gold); }
+.calc-mode-btn:not(.on):hover { color:var(--text); background:rgba(255,255,255,.04); }
+
+.calc-inputs-time { display:flex; align-items:center; gap:8px; }
+.calc-inputs-lap  { display:flex; align-items:center; gap:8px; }
+.calc-inputs-time.hidden, .calc-inputs-lap.hidden { display:none; }
+
+.lap-input {
+  background:var(--navy3); border:1px solid var(--border2); border-radius:4px;
+  color:var(--text); font-family:var(--font); font-size:13px; font-weight:600;
+  padding:3px 8px; outline:none; width:62px; text-align:center;
+  -moz-appearance:textfield;
+}
+.lap-input::-webkit-inner-spin-button, .lap-input::-webkit-outer-spin-button { -webkit-appearance:none; }
+.lap-input:focus { border-color:var(--gold); }
+.lap-range-sep { font-size:11px; color:var(--muted); }
+.lap-single-toggle {
+  background:transparent; border:1px solid var(--border2); border-radius:4px;
+  color:var(--muted); font-family:var(--font); font-size:11px; font-weight:600;
+  padding:3px 9px; cursor:pointer; white-space:nowrap;
+  transition:color .15s, border-color .15s, background .15s;
+}
+.lap-single-toggle:hover { color:var(--text); border-color:var(--gold-dim); }
+.lap-single-toggle.on { color:var(--gold); border-color:var(--gold-dim); background:var(--gold-bg); }
+
+/* chart stage groups inside the charts section */
+.chart-stages-wrap { display:flex; flex-direction:column; gap:8px; }
+.chart-stage-group { border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+.chart-stage-header {
+  display:flex; align-items:center; gap:8px; padding:8px 14px;
+  cursor:pointer; user-select:none; background:var(--navy3);
+  transition:background .12s;
+}
+.chart-stage-header:hover { background:var(--navy4); }
+.chart-stage-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.chart-stage-name { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); flex:1; }
+.chart-stage-count { font-size:10px; color:var(--muted); background:var(--navy4); border-radius:8px; padding:1px 6px; }
+.chart-stage-chevron { color:var(--muted); transition:transform .2s; flex-shrink:0; }
+.chart-stage-group.open .chart-stage-chevron { transform:rotate(90deg); }
+.chart-stage-body { display:none; padding:12px; background:var(--navy2); }
+.chart-stage-group.open .chart-stage-body { display:block; }
+
+/* lap breakdown table */
+.lap-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:4px; }
+.lap-table th { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding:6px 10px; border-bottom:1px solid var(--border); text-align:left; }
+.lap-table td { padding:7px 10px; border-bottom:1px solid var(--border); color:var(--text); }
+.lap-table tr:last-child td { border-bottom:none; }
+.lap-table tr:hover td { background:var(--navy3); }
+.lap-table .td-num { font-weight:700; color:var(--gold); }
+.lap-table .td-val { font-variant-numeric:tabular-nums; }
+
 .stat-grid {
-  display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin-bottom:8px;
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin-bottom:4px;
 }
 .stat-card {
-  background:var(--navy2); border:1px solid var(--border);
+  background:var(--navy3); border:1px solid var(--border);
   border-radius:6px; padding:12px 14px;
   border-top:2px solid var(--card-color,var(--gold));
 }
@@ -436,10 +516,10 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px
 .stat-card-value { font-size:22px; font-weight:700; color:var(--card-color,var(--text)); line-height:1.1; }
 .stat-card-unit { font-size:12px; font-weight:400; color:var(--muted); margin-left:3px; }
 .mini-charts-grid {
-  display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; margin-bottom:8px;
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; margin-bottom:4px;
 }
 .mini-chart-card {
-  background:var(--navy2); border:1px solid var(--border); border-radius:6px; overflow:hidden;
+  background:var(--navy3); border:1px solid var(--border); border-radius:6px; overflow:hidden;
 }
 .mini-chart-title {
   font-size:11px; font-weight:600; color:var(--muted);
@@ -659,17 +739,35 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px
       <!-- Calculations tab -->
       <div id="calcTab">
         <div class="calc-toolbar">
-          <span class="calc-toolbar-label">Time Range</span>
-          <span class="ts-label">From</span>
-          <span id="dtCalcFrom" class="dt-picker"></span>
-          <span class="ts-label">To</span>
-          <span id="dtCalcTo" class="dt-picker"></span>
+          <!-- Mode toggle: Time vs Lap -->
+          <div class="calc-range-mode">
+            <button class="calc-mode-btn on" id="calcModeTime" onclick="setCalcMode('time')">Time</button>
+            <button class="calc-mode-btn" id="calcModeLap" onclick="setCalcMode('lap')">Lap</button>
+          </div>
+
+          <!-- Time inputs -->
+          <div class="calc-inputs-time" id="calcInputsTime">
+            <span class="ts-label">From</span>
+            <span id="dtCalcFrom" class="dt-picker"></span>
+            <span class="ts-label">To</span>
+            <span id="dtCalcTo" class="dt-picker"></span>
+          </div>
+
+          <!-- Lap inputs -->
+          <div class="calc-inputs-lap hidden" id="calcInputsLap">
+            <span class="ts-label">Lap</span>
+            <input class="lap-input" type="number" id="lapFrom" min="0" max="999" value="1" placeholder="1">
+            <span class="lap-range-sep" id="lapRangeSep">→</span>
+            <input class="lap-input" type="number" id="lapTo" min="0" max="999" value="1" placeholder="1" id="lapTo">
+            <button class="lap-single-toggle" id="lapSingleBtn" onclick="toggleLapSingle()">Single lap</button>
+          </div>
+
           <button class="ts-apply" onclick="runCalculations()">Analyse</button>
           <span id="calcStatus" class="static-badge hidden"></span>
         </div>
         <div id="calcBody" class="calc-body">
           <div class="calc-empty">
-            <div class="plot-empty-hint">Set a time range and click Analyse to see aggregate statistics</div>
+            <div class="plot-empty-hint">Set a time range or lap and click Analyse</div>
           </div>
         </div>
       </div>
@@ -1728,6 +1826,54 @@ function prefillCalcInputs() {
   dtSet('dtCalcTo',   now);
 }
 
+// ─── CALC MODE ────────────────────────────────────────────────────────────────
+let calcMode = 'time';      // 'time' | 'lap'
+let lapSingleMode = false;  // when true, lapTo is hidden and equals lapFrom
+
+function setCalcMode(mode) {
+  calcMode = mode;
+  document.getElementById('calcModeTime').classList.toggle('on', mode==='time');
+  document.getElementById('calcModeLap').classList.toggle('on', mode==='lap');
+  document.getElementById('calcInputsTime').classList.toggle('hidden', mode!=='time');
+  document.getElementById('calcInputsLap').classList.toggle('hidden', mode!=='lap');
+}
+
+function toggleLapSingle() {
+  lapSingleMode = !lapSingleMode;
+  const btn = document.getElementById('lapSingleBtn');
+  const sep = document.getElementById('lapRangeSep');
+  const toInput = document.getElementById('lapTo');
+  btn.classList.toggle('on', lapSingleMode);
+  sep.style.display = lapSingleMode ? 'none' : '';
+  toInput.style.display = lapSingleMode ? 'none' : '';
+}
+
+// Resolve a lap number to a [tStart, tEnd] pair using LapIndexSpreadsheet history
+function lapToTimeRange(lapNum) {
+  const lapHist = history['LapIndexSpreadsheet'];
+  if (!lapHist || !lapHist.length) return null;
+  // Find first and last timestamps where lap index rounds to lapNum
+  const pts = lapHist.filter(p => Math.round(p.v) === lapNum);
+  if (!pts.length) return null;
+  return { tStart: pts[0].t, tEnd: pts[pts.length-1].t };
+}
+
+// Build a section HTML helper (collapsed by default unless open=true)
+function makeSection(id, title, contentHTML, open=false) {
+  return `
+    <div class="calc-section${open?' open':''}" id="sec-${id}">
+      <div class="calc-section-header" onclick="toggleSection('sec-${id}')">
+        <div class="calc-section-title">${title}</div>
+        <svg class="calc-section-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
+      </div>
+      <div class="calc-section-body">${contentHTML}</div>
+    </div>`;
+}
+
+function toggleSection(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
 // ─── CALCULATIONS ENGINE ──────────────────────────────────────────────────────
 function metricAt(hist, t) {
   if(!hist||!hist.length) return null;
@@ -1754,16 +1900,47 @@ function average(hist, tStart, tEnd) {
 
 function runCalculations() {
   const statusEl=document.getElementById('calcStatus');
-  const f=dtGet('dtCalcFrom'), t=dtGet('dtCalcTo');
-  if(!f||!t||f>=t){
-    const flash=id=>{const el=document.getElementById(id);if(el){el.style.borderColor='var(--red)';setTimeout(()=>el.style.borderColor='',1200);}};
-    flash('dtCalcFrom');flash('dtCalcTo'); return;
+  let f, t;
+  let lapRangeUsed = null;
+
+  if (calcMode === 'lap') {
+    const lapA = parseInt(document.getElementById('lapFrom').value);
+    const lapB = lapSingleMode ? lapA : parseInt(document.getElementById('lapTo').value);
+    const lapMin = Math.min(lapA, lapB), lapMax = Math.max(lapA, lapB);
+
+    // Resolve lap range to timestamps
+    const lapHist = history['LapIndexSpreadsheet'];
+    if (!lapHist || !lapHist.length) {
+      statusEl.textContent='No lap data'; statusEl.classList.remove('hidden');
+      setTimeout(()=>statusEl.classList.add('hidden'), 2500); return;
+    }
+    const ptsInRange = lapHist.filter(p => {
+      const r = Math.round(p.v);
+      return r >= lapMin && r <= lapMax;
+    });
+    if (!ptsInRange.length) {
+      statusEl.textContent='Laps not found'; statusEl.classList.remove('hidden');
+      setTimeout(()=>statusEl.classList.add('hidden'), 2500); return;
+    }
+    f = ptsInRange[0].t;
+    t = ptsInRange[ptsInRange.length-1].t;
+    lapRangeUsed = { min: lapMin, max: lapMax };
+  } else {
+    f = dtGet('dtCalcFrom');
+    t = dtGet('dtCalcTo');
+    if(!f||!t||f>=t){
+      const flash=id=>{const el=document.getElementById(id);if(el){el.style.borderColor='var(--red)';setTimeout(()=>el.style.borderColor='',1200);}};
+      flash('dtCalcFrom');flash('dtCalcTo'); return;
+    }
   }
+
   statusEl.textContent='Computing…'; statusEl.classList.remove('hidden');
 
   const hists={};
   SIGNALS.forEach(m=>{hists[m.field]=history[m.field].filter(p=>p.t>=f&&p.t<=t);});
   const body=document.getElementById('calcBody');
+  const fmt=(v,dec,fb='—')=>v!==null&&!isNaN(v)?v.toFixed(dec):fb;
+
   const durSec=(t-f)/1000;
   const avgSpeed=average(hists['VehicleVelocity'],f,t);
   const socStart=hists['SOC'].length?hists['SOC'][0].v:null;
@@ -1773,32 +1950,123 @@ function runCalculations() {
   const packEnergyKWh =integrate(hists['PackPower'], f,t)/3600000;
   const avgMotor=average(hists['MotorPower'],f,t);
   const avgPack =average(hists['PackPower'], f,t);
-  const fmt=(v,dec,fb='—')=>v!==null&&!isNaN(v)?v.toFixed(dec):fb;
+  const avgEff5=average(hists['Efficiency5Minute'],f,t);
+  const avgEff1h=average(hists['Efficiency1Hour'],f,t);
+  const avgEffLap=average(hists['EfficiencyLap'],f,t);
 
-  body.innerHTML=`
-    <div class="calc-section-title">Summary</div>
+  // Range label
+  let rangeLabel = '';
+  if (lapRangeUsed) {
+    rangeLabel = lapRangeUsed.min === lapRangeUsed.max
+      ? `Lap ${lapRangeUsed.min}`
+      : `Laps ${lapRangeUsed.min} – ${lapRangeUsed.max}`;
+  } else {
+    const d1=new Date(f), d2=new Date(t);
+    const ts=d=>d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    rangeLabel = `${ts(d1)} → ${ts(d2)}`;
+  }
+
+  // ── Summary section (open by default) ──
+  const summaryHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">${rangeLabel}</div>
     <div class="stat-grid">
       <div class="stat-card" style="--card-color:#60a5fa"><div class="stat-card-label">Duration</div><div class="stat-card-value">${fmt(durSec/60,1)}<span class="stat-card-unit">min</span></div></div>
       <div class="stat-card" style="--card-color:#60a5fa"><div class="stat-card-label">Avg Speed</div><div class="stat-card-value">${fmt(avgSpeed,2)}<span class="stat-card-unit">m/s</span></div></div>
       <div class="stat-card" style="--card-color:#4caf7d"><div class="stat-card-label">SOC Start</div><div class="stat-card-value">${fmt(socStart!==null?socStart*100:null,1)}<span class="stat-card-unit">%</span></div></div>
       <div class="stat-card" style="--card-color:#4caf7d"><div class="stat-card-label">SOC End</div><div class="stat-card-value">${fmt(socEnd!==null?socEnd*100:null,1)}<span class="stat-card-unit">%</span></div></div>
       <div class="stat-card" style="--card-color:${deltaSoc!==null&&deltaSoc>0?'var(--red)':'var(--green)'}"><div class="stat-card-label">Δ SOC</div><div class="stat-card-value">${deltaSoc!==null?(deltaSoc>0?'−':'+')+fmt(Math.abs(deltaSoc)*100,1):'—'}<span class="stat-card-unit">%</span></div></div>
+    </div>`;
+
+  // ── Energy section ──
+  const energyHTML = `
+    <div class="stat-grid">
       <div class="stat-card" style="--card-color:#e05c4a"><div class="stat-card-label">Motor Energy</div><div class="stat-card-value">${fmt(motorEnergyKWh*1000,1)}<span class="stat-card-unit">Wh</span></div></div>
       <div class="stat-card" style="--card-color:#f0a500"><div class="stat-card-label">Pack Energy</div><div class="stat-card-value">${fmt(packEnergyKWh*1000,1)}<span class="stat-card-unit">Wh</span></div></div>
       <div class="stat-card" style="--card-color:#e05c4a"><div class="stat-card-label">Avg Motor Power</div><div class="stat-card-value">${fmt(avgMotor!==null?avgMotor/1000:null,2)}<span class="stat-card-unit">kW</span></div></div>
       <div class="stat-card" style="--card-color:#f0a500"><div class="stat-card-label">Avg Pack Power</div><div class="stat-card-value">${fmt(avgPack!==null?avgPack/1000:null,2)}<span class="stat-card-unit">kW</span></div></div>
-    </div>
-    <div class="calc-section-title">Time-Series Graphs</div>
-    <div class="mini-charts-grid" id="miniChartsGrid"></div>
-  `;
+    </div>`;
+
+  // ── Efficiency section ──
+  const effHTML = `
+    <div class="stat-grid">
+      <div class="stat-card" style="--card-color:#a78bfa"><div class="stat-card-label">Efficiency 5-min avg</div><div class="stat-card-value">${fmt(avgEff5,1)}<span class="stat-card-unit">J/m</span></div></div>
+      <div class="stat-card" style="--card-color:#a78bfa"><div class="stat-card-label">Efficiency 1-hr avg</div><div class="stat-card-value">${fmt(avgEff1h,1)}<span class="stat-card-unit">J/m</span></div></div>
+      <div class="stat-card" style="--card-color:#a78bfa"><div class="stat-card-label">Efficiency per Lap avg</div><div class="stat-card-value">${fmt(avgEffLap,1)}<span class="stat-card-unit">J/m</span></div></div>
+    </div>`;
+
+  // ── Lap breakdown (only when multi-lap range selected) ──
+  let lapBreakdownHTML = '';
+  if (lapRangeUsed && lapRangeUsed.min !== lapRangeUsed.max) {
+    const lapHist = history['LapIndexSpreadsheet'];
+    let rows = '';
+    for (let lap = lapRangeUsed.min; lap <= lapRangeUsed.max; lap++) {
+      const pts = lapHist.filter(p => Math.round(p.v) === lap);
+      if (!pts.length) continue;
+      const lf = pts[0].t, lt = pts[pts.length-1].t;
+      const ldur = (lt-lf)/1000;
+      const lSocStart = hists['SOC'].length ? metricAt(history['SOC'], lf) : null;
+      const lSocEnd   = hists['SOC'].length ? metricAt(history['SOC'], lt) : null;
+      const lDeltaSoc = (lSocStart!==null&&lSocEnd!==null) ? (lSocStart-lSocEnd)*100 : null;
+      const lSpeed = average(history['VehicleVelocity'], lf, lt);
+      const lPower = average(history['PackPower'], lf, lt);
+      const lEff   = average(history['EfficiencyLap'], lf, lt);
+      rows += `<tr>
+        <td class="td-num">${lap}</td>
+        <td class="td-val">${fmt(ldur/60,1)} min</td>
+        <td class="td-val">${fmt(lSpeed,2)} m/s</td>
+        <td class="td-val">${lDeltaSoc!==null?(lDeltaSoc>0?'−':'+')+fmt(Math.abs(lDeltaSoc),1)+'%':'—'}</td>
+        <td class="td-val">${fmt(lPower!==null?lPower/1000:null,2)} kW</td>
+        <td class="td-val">${fmt(lEff,1)} J/m</td>
+      </tr>`;
+    }
+    lapBreakdownHTML = `
+      <table class="lap-table">
+        <thead><tr><th>Lap</th><th>Duration</th><th>Avg Speed</th><th>Δ SOC</th><th>Avg Pack Power</th><th>Efficiency</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  // ── Charts section — one sub-group per stage ──
+  const chartsHTML = STAGES.map(stage => {
+    const signals = SIGNALS.filter(s => s.stage === stage.id);
+    const count = signals.length;
+    return `
+      <div class="chart-stage-group" id="csg-${stage.id}">
+        <div class="chart-stage-header" onclick="toggleChartStage('csg-${stage.id}')">
+          <span class="chart-stage-dot" style="background:${stage.color}"></span>
+          <span class="chart-stage-name">${stage.label}</span>
+          <span class="chart-stage-count">${count}</span>
+          <svg class="chart-stage-chevron" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
+        </div>
+        <div class="chart-stage-body">
+          <div class="mini-charts-grid" id="chartgrid-${stage.id}"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Build output
+  let html = makeSection('summary', 'Summary', summaryHTML, true);
+  html += makeSection('energy', 'Energy & Power', energyHTML, false);
+  html += makeSection('efficiency', 'Efficiency', effHTML, false);
+  if (lapBreakdownHTML) html += makeSection('lapbreakdown', 'Lap Breakdown', lapBreakdownHTML, false);
+  html += makeSection('charts', 'Time-Series Graphs', `<div class="chart-stages-wrap">${chartsHTML}</div>`, false);
+
+  body.innerHTML = html;
   drawMiniCharts(f, t);
   statusEl.textContent='Done'; setTimeout(()=>statusEl.classList.add('hidden'),2000);
 }
 
+function toggleChartStage(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
 function drawMiniCharts(tFrom, tTo) {
-  const grid=document.getElementById('miniChartsGrid'); if(!grid) return;
-  grid.innerHTML='';
-  SIGNALS.forEach(m=>{
+  STAGES.forEach(stage => {
+    const grid = document.getElementById('chartgrid-' + stage.id);
+    if (!grid) return;
+    grid.innerHTML = '';
+    const signals = SIGNALS.filter(s => s.stage === stage.id);
+    signals.forEach(m => {
     const pts=history[m.field].filter(p=>p.t>=tFrom&&p.t<=tTo);
     const card=document.createElement('div'); card.className='mini-chart-card';
     card.innerHTML=`<div class="mini-chart-title"><span class="dot" style="background:${m.color}"></span>${m.label}<span style="font-size:10px;color:var(--muted);margin-left:auto">${m.unit}</span></div><canvas class="mini-chart-canvas" width="280" height="120"></canvas>`;
@@ -1831,7 +2099,8 @@ function drawMiniCharts(tFrom, tTo) {
       ctx.beginPath();ctx.moveTo(toX(pts[0].t),toY(pts[0].v));pts.slice(1).forEach(p=>ctx.lineTo(toX(p.t),toY(p.v)));ctx.lineTo(toX(pts[pts.length-1].t),PAD.t+cH);ctx.lineTo(toX(pts[0].t),PAD.t+cH);ctx.closePath();ctx.fillStyle=m.color+'18';ctx.fill();
       ctx.beginPath();ctx.moveTo(toX(pts[0].t),toY(pts[0].v));pts.slice(1).forEach(p=>ctx.lineTo(toX(p.t),toY(p.v)));ctx.strokeStyle=m.color;ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
     });
-  });
+    }); // end signals.forEach
+  }); // end STAGES.forEach
 }
 
 // ─── OVERVIEW ENGINE ──────────────────────────────────────────────────────────
