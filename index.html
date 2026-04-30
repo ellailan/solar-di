@@ -52,6 +52,7 @@ header { display:flex; align-items:center; gap:12px; padding:0 16px; height:36px
 .header-search {
   margin-left:auto; position:relative; display:flex; align-items:center;
 }
+.header-search.hidden { display:none; }
 .header-search input {
   background:var(--navy3); border:1px solid var(--border2); border-radius:5px;
   color:var(--text); font-family:var(--font); font-size:12px;
@@ -529,7 +530,70 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px
 .mini-chart-title .dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
 .mini-chart-canvas { display:block; width:100%; height:120px; }
 
-/* dark-mode leaflet */
+/* ── LAP ANALYSIS TAB ── */
+.la-tab {
+  flex:1; min-height:0; overflow:hidden;
+  display:flex; flex-direction:column; background:var(--navy);
+}
+.la-tab.hidden { display:none; }
+
+.la-toolbar {
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:9px 20px; background:var(--navy2);
+  border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.la-toolbar-label { font-size:11px; font-weight:700; color:var(--gold); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+
+.la-metric-select-wrap select {
+  background:var(--navy3); border:1px solid var(--border2); border-radius:4px;
+  color:var(--text); font-family:var(--font); font-size:13px;
+  padding:5px 12px; outline:none; cursor:pointer; min-width:220px;
+}
+.la-metric-select-wrap select:focus { border-color:var(--gold); }
+.la-metric-select-wrap select option { background:var(--navy3); }
+
+.la-agg-toggle {
+  display:flex; align-items:center; gap:0;
+  border:1px solid var(--border2); border-radius:5px; overflow:hidden;
+}
+.la-agg-btn {
+  background:transparent; border:none; color:var(--muted); font-family:var(--font);
+  font-size:11px; font-weight:600; padding:5px 12px; cursor:pointer; letter-spacing:.03em;
+  transition:background .15s, color .15s; white-space:nowrap;
+}
+.la-agg-btn + .la-agg-btn { border-left:1px solid var(--border2); }
+.la-agg-btn.on { background:var(--gold-bg); color:var(--gold); }
+.la-agg-btn:not(.on):hover { color:var(--text); background:rgba(255,255,255,.04); }
+
+.la-body {
+  flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;
+  padding:20px;
+}
+.la-empty {
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+}
+.la-empty.hidden { display:none; }
+
+.la-chart-wrap {
+  flex:1; position:relative; min-height:0;
+}
+.la-chart-wrap.hidden { display:none; }
+#laCanvas { position:absolute; inset:0; width:100%; height:100%; }
+
+.la-stats-row {
+  display:flex; gap:12px; flex-wrap:wrap; flex-shrink:0; margin-top:14px;
+}
+.la-stats-row.hidden { display:none; }
+.la-stat-card {
+  background:var(--navy2); border:1px solid var(--border);
+  border-radius:8px; padding:10px 16px; flex:1 1 120px;
+  border-top:2px solid var(--gold-dim);
+}
+.la-stat-card-label { font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+.la-stat-card-val { font-size:22px; font-weight:800; color:var(--text); line-height:1; }
+.la-stat-card-unit { font-size:11px; color:var(--muted); margin-left:3px; }
+
+
 .leaflet-layer,.leaflet-control-zoom-in,.leaflet-control-zoom-out,.leaflet-control-attribution {
   filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
@@ -548,6 +612,7 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px
       <button class="top-tab active" id="tabOverview" onclick="switchTab('overview')">Overview</button>
       <button class="top-tab" id="tabData" onclick="switchTab('data')">Data</button>
       <button class="top-tab" id="tabCalc" onclick="switchTab('calc')">Calculations</button>
+      <button class="top-tab" id="tabLapAnalysis" onclick="switchTab('lapanalysis')">Lap Analysis</button>
     </nav>
     <!-- Graph / Map view toggle — only visible in Data tab -->
     <div class="view-toggle" id="viewToggle">
@@ -769,6 +834,46 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:3px
           <div class="calc-empty">
             <div class="plot-empty-hint">Set a time range or lap and click Analyse</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Lap Analysis tab -->
+      <div id="lapAnalysisTab" class="la-tab hidden">
+        <div class="la-toolbar">
+          <span class="la-toolbar-label">Metric</span>
+          <div class="la-metric-select-wrap">
+            <select id="laMetricSelect" onchange="renderLapAnalysis()">
+              <option value="">— pick a metric —</option>
+            </select>
+          </div>
+          <span class="la-toolbar-label" style="margin-left:8px">Aggregation</span>
+          <div class="la-agg-toggle">
+            <button class="la-agg-btn on" id="laAggMean"   onclick="setLaAgg('mean')">Mean</button>
+            <button class="la-agg-btn" id="laAggMedian" onclick="setLaAgg('median')">Median</button>
+            <button class="la-agg-btn" id="laAggMax"    onclick="setLaAgg('max')">Max</button>
+            <button class="la-agg-btn" id="laAggMin"    onclick="setLaAgg('min')">Min</button>
+          </div>
+          <span class="la-toolbar-label" style="margin-left:8px">Laps</span>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <input id="laLapFrom" type="number" min="0" max="999" value="1"
+              style="width:54px;text-align:center;background:var(--navy3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;padding:4px 6px;outline:none;"
+              oninput="renderLapAnalysis()"
+              onfocus="this.style.borderColor='var(--gold)'"
+              onblur="this.style.borderColor='var(--border2)'">
+            <span style="font-size:11px;font-weight:500;color:var(--muted)">→</span>
+            <input id="laLapTo" type="number" min="0" max="999" value="999"
+              style="width:54px;text-align:center;background:var(--navy3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;padding:4px 6px;outline:none;"
+              oninput="renderLapAnalysis()"
+              onfocus="this.style.borderColor='var(--gold)'"
+              onblur="this.style.borderColor='var(--border2)'">
+          </div>
+        </div>
+        <div class="la-body">
+          <div class="la-empty hidden" id="laEmpty"></div>
+          <div class="la-chart-wrap hidden" id="laChartWrap">
+            <canvas id="laCanvas"></canvas>
+          </div>
+          <div class="la-stats-row hidden" id="laStatsRow"></div>
         </div>
       </div>
 
@@ -1616,6 +1721,7 @@ const WAYPOINTS = [
 ];
 
 let wpIdx = 0;
+const simStartTime = Date.now();
 // Dummy state for all signals
 const ds = {
   TotalPackVoltage: 120, AcceleratorPosition: 0.3, BatteryCurrent: 50, BatteryCurrentDir: 0,
@@ -1624,7 +1730,7 @@ const ds = {
   PackPower: 5800, MotorPower: 5500,
   EnergyVOLExtrapolated: 2400, IntegratedPackPower: -120, EnergyFromIntegratedPower: 2280,
   Efficiency1Hour: 280, Efficiency5Minute: 300, EfficiencyLap: 290,
-  LapIndex: 3, TrackIndex: 0.45, LapIndexIntegrated: 3, LapIndexSpreadsheet: 3,
+  LapIndex: 4, TrackIndex: 0.45, LapIndexIntegrated: 4, LapIndexSpreadsheet: 4,
   TrackDistSpreadsheet: 2268, TrackIdxSpreadsheet: 0.45,
   AirTemperature: 28, Azimuth: 15, DHI: 80, DNI: 650, GHI: 700,
   PrecipitationRate: 0, WindDirection: 180, WindSpeed: 3.5, Zenith: 42,
@@ -1658,8 +1764,9 @@ function dummyTick() {
   ds.Efficiency1Hour     = w(ds.Efficiency1Hour, 5, 0, 800);
   ds.Efficiency5Minute   = w(ds.Efficiency5Minute, 8, 0, 800);
   ds.EfficiencyLap       = w(ds.EfficiencyLap, 6, 0, 800);
-  // localization
-  ds.LapIndex            = Math.floor(w(ds.LapIndex, 0.01, 0, 60));
+  // localization — lap advances every ~4 min of real time
+  const elapsedMin = (Date.now() - simStartTime) / 60000;
+  ds.LapIndex            = 4 + Math.floor(elapsedMin / 4); // laps 4+ after seeded 1-3
   ds.TrackIndex          = w(ds.TrackIndex, 0.005, 0, 1);
   ds.LapIndexIntegrated  = ds.LapIndex;
   ds.LapIndexSpreadsheet = ds.LapIndex;
@@ -1788,12 +1895,15 @@ function switchTab(tab) {
   document.getElementById('tabOverview').classList.toggle('active', tab==='overview');
   document.getElementById('tabData').classList.toggle('active', tab==='data');
   document.getElementById('tabCalc').classList.toggle('active', tab==='calc');
+  document.getElementById('tabLapAnalysis').classList.toggle('active', tab==='lapanalysis');
   document.getElementById('viewToggle').classList.toggle('hidden', tab!=='data');
+  document.getElementById('signalSearch').closest('.header-search').classList.toggle('hidden', tab!=='data');
 
   // hide all panels
   document.getElementById('overviewTab').classList.remove('active');
   document.getElementById('dataTab').classList.add('hidden');
   document.getElementById('calcTab').classList.remove('active');
+  document.getElementById('lapAnalysisTab').classList.add('hidden');
   document.getElementById('sidebar').classList.add('hidden');
   document.getElementById('sidebarToggle').classList.add('hidden');
 
@@ -1810,6 +1920,11 @@ function switchTab(tab) {
     }
     if (activeFields.size > 0 && !staticMode) startLoop();
     if (leafletMap) leafletMap.invalidateSize();
+  } else if (tab === 'lapanalysis') {
+    stopOverviewLoop(); stopLoop();
+    document.getElementById('lapAnalysisTab').classList.remove('hidden');
+    populateLaMetricSelect();
+    renderLapAnalysis();
   } else {
     stopOverviewLoop();
     document.getElementById('calcTab').classList.add('active');
@@ -2180,14 +2295,334 @@ function renderOverview() {
   ovSet('ovZenith',  fmt(ovLast('Zenith'), 0));
 }
 
+// ─── LAP ANALYSIS ENGINE ─────────────────────────────────────────────────────
+let laAgg = 'mean';
+
+function setLaAgg(mode) {
+  laAgg = mode;
+  ['mean','median','max','min'].forEach(m => {
+    document.getElementById('laAgg' + m.charAt(0).toUpperCase() + m.slice(1))?.classList.toggle('on', m === mode);
+  });
+  renderLapAnalysis();
+}
+
+function populateLaMetricSelect() {
+  const sel = document.getElementById('laMetricSelect');
+  if (!sel) return;
+  // only repopulate if empty
+  if (sel.options.length > 1) return;
+  STAGES.forEach(stage => {
+    const sigs = SIGNALS.filter(s => s.stage === stage.id);
+    if (!sigs.length) return;
+    const grp = document.createElement('optgroup');
+    grp.label = stage.label;
+    sigs.forEach(sig => {
+      const opt = document.createElement('option');
+      opt.value = sig.field;
+      opt.textContent = sig.label + (sig.unit ? ' (' + sig.unit + ')' : '');
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  });
+}
+
+function getLapData() {
+  // All signals are pushed at the same timestamps, so LapIndex[i] corresponds to signal[i].
+  // Group each signal's values by the lap number recorded at the same index.
+  const lapIdxHistory = history['LapIndex'];
+  if (!lapIdxHistory || !lapIdxHistory.length) return {};
+
+  const lapMap = {}; // lap# -> { field -> values[] }
+
+  SIGNALS.forEach(sig => {
+    const h = history[sig.field];
+    if (!h || !h.length) return;
+    const len = Math.min(h.length, lapIdxHistory.length);
+    for (let i = 0; i < len; i++) {
+      const lap = Math.round(lapIdxHistory[i].v);
+      if (lap < 1) continue;
+      if (!lapMap[lap]) lapMap[lap] = {};
+      if (!lapMap[lap][sig.field]) lapMap[lap][sig.field] = [];
+      lapMap[lap][sig.field].push(h[i].v);
+    }
+  });
+
+  return lapMap;
+}
+
+function aggregate(values, mode) {
+  if (!values || !values.length) return null;
+  switch(mode) {
+    case 'mean':   return values.reduce((a,b)=>a+b,0)/values.length;
+    case 'median': { const s=[...values].sort((a,b)=>a-b); const m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+    case 'max':    return Math.max(...values);
+    case 'min':    return Math.min(...values);
+  }
+}
+
+function renderLapAnalysis() {
+  const sel = document.getElementById('laMetricSelect');
+  const emptyEl = document.getElementById('laEmpty');
+  const wrapEl = document.getElementById('laChartWrap');
+  const statsEl = document.getElementById('laStatsRow');
+  if (!sel) return;
+
+  const field = sel.value;
+  const sig = SIGNALS.find(s => s.field === field);
+
+  if (!field || !sig) {
+    emptyEl.innerHTML = '<div class="plot-empty-hint">Select a metric above to compare lap averages</div><div class="plot-empty-sub">Each dot = one lap · connected line shows trend</div>';
+    emptyEl.classList.remove('hidden');
+    wrapEl.classList.add('hidden');
+    statsEl.classList.add('hidden');
+    return;
+  }
+
+  const lapMap = getLapData();
+  const laps = Object.keys(lapMap).map(Number).sort((a,b)=>a-b);
+
+  const points = laps.map(lap => {
+    const vals = lapMap[lap]?.[field];
+    const agg = aggregate(vals, laAgg);
+    return { lap, agg, count: vals ? vals.length : 0 };
+  }).filter(p => p.agg !== null);
+
+  // Apply lap range filter
+  const lapFromEl = document.getElementById('laLapFrom');
+  const lapToEl   = document.getElementById('laLapTo');
+  const rangeFrom = lapFromEl ? (parseInt(lapFromEl.value) || 1)   : 1;
+  const rangeTo   = lapToEl   ? (parseInt(lapToEl.value)   || 999) : 999;
+  const visiblePoints = points.filter(p => p.lap >= rangeFrom && p.lap <= rangeTo);
+
+  if (visiblePoints.length < 1) {
+    emptyEl.innerHTML = '<div class="plot-empty-hint">No laps in that range</div><div class="plot-empty-sub">Try adjusting the lap range above</div>';
+    emptyEl.classList.remove('hidden');
+    wrapEl.classList.add('hidden');
+    statsEl.classList.add('hidden');
+    return;
+  }
+
+  emptyEl.classList.add('hidden');
+  wrapEl.classList.remove('hidden');
+  statsEl.classList.remove('hidden');
+
+  // Draw scatter + line chart
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('laCanvas');
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth, H = canvas.offsetHeight;
+    if (!W || !H) return;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+
+    const PAD = { t: 28, b: 48, l: 64, r: 28 };
+    const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+    const FONT = '11px Poppins,sans-serif';
+    const LABEL = '#7a8fa3';
+
+    ctx.clearRect(0, 0, W, H);
+
+    const vals = visiblePoints.map(p => p.agg);
+    const yMin = Math.min(...vals), yMax = Math.max(...vals);
+    const yRange = yMax - yMin || 1;
+    const yPad = yRange * 0.15;
+    const yLo = yMin - yPad, yHi = yMax + yPad;
+
+    const lapNums = visiblePoints.map(p => p.lap);
+    const xMin = Math.min(...lapNums), xMax = Math.max(...lapNums);
+    const xRange = xMax - xMin || 1;
+
+    const toX = l => PAD.l + ((l - xMin) / xRange) * cW;
+    const toY = v => PAD.t + cH - ((v - yLo) / (yHi - yLo)) * cH;
+
+    // Grid
+    ctx.strokeStyle = '#ffffff0a'; ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 5; i++) {
+      const y = PAD.t + (i / 5) * cH;
+      ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l + cW, y); ctx.stroke();
+    }
+
+    // Y axis labels
+    ctx.font = FONT; ctx.fillStyle = LABEL; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 5; i++) {
+      const v = yHi - (i / 5) * (yHi - yLo);
+      const y = PAD.t + (i / 5) * cH;
+      ctx.fillText(v.toFixed(sig.decimals <= 1 ? 1 : 2), PAD.l - 8, y);
+    }
+
+    // Y axis unit label (rotated)
+    ctx.save();
+    ctx.translate(14, PAD.t + cH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.font = '10px Poppins,sans-serif'; ctx.fillStyle = LABEL; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(sig.unit || '', 0, 0);
+    ctx.restore();
+
+    // X axis labels
+    ctx.font = FONT; ctx.fillStyle = LABEL; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    visiblePoints.forEach(p => {
+      ctx.fillText('Lap ' + p.lap, toX(p.lap), PAD.t + cH + 8);
+    });
+
+    // Axes
+    ctx.strokeStyle = '#ffffff18'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD.l, PAD.t); ctx.lineTo(PAD.l, PAD.t + cH); ctx.lineTo(PAD.l + cW, PAD.t + cH); ctx.stroke();
+
+    // Connected line
+    if (visiblePoints.length >= 2) {
+      ctx.beginPath();
+      ctx.moveTo(toX(visiblePoints[0].lap), toY(visiblePoints[0].agg));
+      visiblePoints.slice(1).forEach(p => ctx.lineTo(toX(p.lap), toY(p.agg)));
+      ctx.strokeStyle = sig.color + '80'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.setLineDash([6, 3]);
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // Scatter dots with glow
+    visiblePoints.forEach((p, i) => {
+      const x = toX(p.lap), y = toY(p.agg);
+      // Glow
+      ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2);
+      ctx.fillStyle = sig.color + '18'; ctx.fill();
+      // Dot
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = sig.color; ctx.fill();
+      ctx.strokeStyle = '#ffffff30'; ctx.lineWidth = 1.5; ctx.stroke();
+      // Value label above dot
+      ctx.font = '11px Poppins,sans-serif'; ctx.fillStyle = sig.color;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText(p.agg.toFixed(sig.decimals <= 1 ? 1 : 2), x, y - 10);
+    });
+
+    // Chart title
+    ctx.font = '12px Poppins,sans-serif'; ctx.fillStyle = '#f0f4f8';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    const aggLabel = laAgg.charAt(0).toUpperCase() + laAgg.slice(1);
+    const lapRange = visiblePoints.length < points.length
+      ? ` (laps ${visiblePoints[0].lap}–${visiblePoints[visiblePoints.length-1].lap})` : '';
+    ctx.fillText(aggLabel + ' ' + sig.label + ' per Lap' + lapRange, PAD.l, 6);
+  });
+
+  // Stats bar — computed over the visible window only
+  const vals2 = visiblePoints.map(p => p.agg);
+  const best = laAgg === 'min' ? Math.min(...vals2) : Math.max(...vals2);
+  const worst = laAgg === 'min' ? Math.max(...vals2) : Math.min(...vals2);
+  const mean = vals2.reduce((a,b)=>a+b,0)/vals2.length;
+  const trend = vals2.length >= 2 ? vals2[vals2.length-1] - vals2[0] : 0;
+  const dec = sig.decimals <= 1 ? 1 : 2;
+
+  statsEl.innerHTML = `
+    <div class="la-stat-card">
+      <div class="la-stat-card-label">Showing</div>
+      <div class="la-stat-card-val">${visiblePoints.length}<span class="la-stat-card-unit">/ ${points.length} laps</span></div>
+    </div>
+    <div class="la-stat-card">
+      <div class="la-stat-card-label">Mean (shown)</div>
+      <div class="la-stat-card-val">${mean.toFixed(dec)}<span class="la-stat-card-unit">${sig.unit}</span></div>
+    </div>
+    <div class="la-stat-card">
+      <div class="la-stat-card-label">Best</div>
+      <div class="la-stat-card-val" style="color:#4caf7d">${best.toFixed(dec)}<span class="la-stat-card-unit">${sig.unit}</span></div>
+    </div>
+    <div class="la-stat-card">
+      <div class="la-stat-card-label">Worst</div>
+      <div class="la-stat-card-val" style="color:#e05c4a">${worst.toFixed(dec)}<span class="la-stat-card-unit">${sig.unit}</span></div>
+    </div>
+    <div class="la-stat-card">
+      <div class="la-stat-card-label">Trend (first→last)</div>
+      <div class="la-stat-card-val" style="color:${trend>=0?'#4caf7d':'#e05c4a'}">${trend>=0?'+':''}${trend.toFixed(dec)}<span class="la-stat-card-unit">${sig.unit}</span></div>
+    </div>
+  `;
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 buildSidebar();
+
+// ── Seed 3 laps of historical data ──────────────────────────────────────────
+(function seedHistory() {
+  const LAP_DURATION_MS = 4 * 60 * 1000; // 4 min per lap (simulated)
+  const TICK_INTERVAL_MS = 2000;          // one point every 2s
+  const now = Date.now();
+  const seed = {
+    TotalPackVoltage: 122, AcceleratorPosition: 0.32, BatteryCurrent: 52, BatteryCurrentDir: 0,
+    BatteryVoltage: 116, CurrentSensor1: 4.1, CurrentSensor2: 3.9, MechBrakePressed: 0,
+    PackCurrent: 50, VehicleVelocity: 15.5, VoltSensor1: 51, VoltSensor2: 50, VoltageofLeast: 3.82,
+    PackPower: 6100, MotorPower: 5700,
+    EnergyVOLExtrapolated: 2500, IntegratedPackPower: -100, EnergyFromIntegratedPower: 2400,
+    Efficiency1Hour: 285, Efficiency5Minute: 305, EfficiencyLap: 295,
+    LapIndex: 1, TrackIndex: 0.0, LapIndexIntegrated: 1, LapIndexSpreadsheet: 1,
+    TrackDistSpreadsheet: 0, TrackIdxSpreadsheet: 0.0,
+    AirTemperature: 27.5, Azimuth: 14, DHI: 78, DNI: 640, GHI: 695,
+    PrecipitationRate: 0, WindDirection: 178, WindSpeed: 3.4, Zenith: 43,
+    UnfilteredSOC: 0.80, SOC: 0.795,
+  };
+  const sw = (v, s, lo, hi) => Math.min(hi, Math.max(lo, v + (Math.random() - .5) * s));
+  const totalTicks = Math.floor((3 * LAP_DURATION_MS) / TICK_INTERVAL_MS);
+  let wpSeed = 0;
+
+  for (let tick = 0; tick < totalTicks; tick++) {
+    const t = now - (totalTicks - tick) * TICK_INTERVAL_MS;
+    const lapProgress = (tick % (LAP_DURATION_MS / TICK_INTERVAL_MS)) / (LAP_DURATION_MS / TICK_INTERVAL_MS);
+    const lapNum = 1 + Math.floor(tick / (LAP_DURATION_MS / TICK_INTERVAL_MS));
+
+    seed.TotalPackVoltage    = sw(seed.TotalPackVoltage, 0.4, 80, 160);
+    seed.AcceleratorPosition = sw(seed.AcceleratorPosition, 0.04, 0, 1);
+    seed.BatteryCurrent      = sw(seed.BatteryCurrent, 4, -50, 200);
+    seed.BatteryCurrentDir   = seed.BatteryCurrent < 0 ? 1 : 0;
+    seed.BatteryVoltage      = sw(seed.BatteryVoltage, 0.3, 0, 160);
+    seed.CurrentSensor1      = sw(seed.CurrentSensor1, 0.15, 0, 10);
+    seed.CurrentSensor2      = sw(seed.CurrentSensor2, 0.15, 0, 10);
+    seed.MechBrakePressed    = Math.random() < 0.02 ? 1 : 0;
+    seed.PackCurrent         = sw(seed.PackCurrent, 3, -50, 200);
+    seed.VehicleVelocity     = sw(seed.VehicleVelocity, 0.8, 0, 50);
+    seed.VoltSensor1         = sw(seed.VoltSensor1, 0.25, 0, 80);
+    seed.VoltSensor2         = sw(seed.VoltSensor2, 0.25, 0, 80);
+    seed.VoltageofLeast      = sw(seed.VoltageofLeast, 0.008, 2.5, 4.2);
+    seed.PackPower           = seed.PackCurrent * seed.TotalPackVoltage;
+    seed.MotorPower          = seed.BatteryCurrent * seed.BatteryVoltage * (seed.BatteryCurrentDir ? -1 : 1);
+    seed.EnergyVOLExtrapolated     = sw(seed.EnergyVOLExtrapolated, 4, 0, 5000);
+    seed.IntegratedPackPower       = sw(seed.IntegratedPackPower, 2, -500, 5000);
+    seed.EnergyFromIntegratedPower = sw(seed.EnergyFromIntegratedPower, 4, 0, 5000);
+    seed.Efficiency1Hour     = sw(seed.Efficiency1Hour, 4, 0, 800);
+    seed.Efficiency5Minute   = sw(seed.Efficiency5Minute, 7, 0, 800);
+    seed.EfficiencyLap       = sw(seed.EfficiencyLap, 5, 0, 800);
+    seed.LapIndex            = lapNum;
+    seed.TrackIndex          = lapProgress;
+    seed.LapIndexIntegrated  = lapNum;
+    seed.LapIndexSpreadsheet = lapNum;
+    seed.TrackDistSpreadsheet= lapProgress * 5040;
+    seed.TrackIdxSpreadsheet = lapProgress;
+    seed.AirTemperature      = sw(seed.AirTemperature, 0.04, -10, 45);
+    seed.Azimuth             = sw(seed.Azimuth, 0.08, -180, 180);
+    seed.DHI                 = sw(seed.DHI, 1.5, 0, 400);
+    seed.DNI                 = sw(seed.DNI, 4, 0, 1000);
+    seed.GHI                 = sw(seed.GHI, 4, 0, 1200);
+    seed.PrecipitationRate   = sw(seed.PrecipitationRate, 0.005, 0, 50);
+    seed.WindDirection       = sw(seed.WindDirection, 0.8, 0, 360);
+    seed.WindSpeed           = sw(seed.WindSpeed, 0.08, 0, 20);
+    seed.Zenith              = sw(seed.Zenith, 0.04, 0, 90);
+    seed.UnfilteredSOC       = sw(seed.UnfilteredSOC, 0.001, 0, 1);
+    seed.SOC                 = sw(seed.SOC, 0.0008, 0, 1);
+
+    SIGNALS.forEach(sig => {
+      if (seed[sig.field] !== undefined) {
+        const m = sig;
+        const v = m.transform ? m.transform(seed[sig.field]) : seed[sig.field];
+        history[sig.field].push({ t, v });
+      }
+    });
+    const wp = WAYPOINTS[wpSeed % WAYPOINTS.length]; wpSeed++;
+    gpsHistory.push({ t, lat: wp[0], lon: wp[1] });
+  }
+})();
+
 setInterval(dummyTick, 500);
 // Boot into Overview
 switchTab('overview');
 window.addEventListener('resize', () => {
   if (leafletMap) leafletMap.invalidateSize();
   if (document.getElementById('plotCanvas') && activeFields.size > 0) render();
+  if (activeTab === 'lapanalysis') renderLapAnalysis();
 });
 </script>
 </body>
