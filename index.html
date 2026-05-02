@@ -599,6 +599,7 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:2px
 }
 .mini-chart-card {
   background:var(--navy3); border:1px solid var(--border); overflow:hidden;
+  transition: border-color .15s;
 }
 .mini-chart-title {
   font-family:var(--mono); font-size:10px; font-weight:500; color:var(--muted);
@@ -606,6 +607,8 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:2px
   display:flex; align-items:center; gap:6px; letter-spacing:.04em; text-transform:uppercase;
 }
 .mini-chart-title .dot { width:6px;height:6px;border-radius:1px;flex-shrink:0; }
+.mini-chart-goto { font-size:10px; color:var(--muted); opacity:0; transition:opacity .15s; margin-left:2px; }
+.mini-chart-card:hover .mini-chart-goto { opacity:1; }
 .mini-chart-canvas { display:block; width:100%; height:120px; }
 
 /* ── LAP ANALYSIS TAB ── */
@@ -2468,6 +2471,23 @@ function toggleChartStage(id) {
   document.getElementById(id).classList.toggle('open');
 }
 
+function openInDataTab(field, tFrom, tTo) {
+  // Set static range BEFORE switching tab so buildChartPanel renders correctly
+  staticMode = true;
+  staticFrom = tFrom;
+  staticTo   = tTo;
+
+  // Switch tab (shows data tab, hides others)
+  switchTab('data');
+
+  // Activate signal — this calls buildChartPanel which reads staticMode correctly
+  activateSignal(field, false);
+
+  // Sync the datetime pickers and re-render with the correct range
+  prefillStaticInputs();
+  render();
+}
+
 function drawMiniCharts(tFrom, tTo) {
   STAGES.forEach(stage => {
     const grid = document.getElementById('chartgrid-' + stage.id);
@@ -2477,7 +2497,12 @@ function drawMiniCharts(tFrom, tTo) {
     signals.forEach(m => {
     const pts=history[m.field].filter(p=>p.t>=tFrom&&p.t<=tTo);
     const card=document.createElement('div'); card.className='mini-chart-card';
-    card.innerHTML=`<div class="mini-chart-title"><span class="dot" style="background:${m.color}"></span>${m.label}<span style="font-size:10px;color:var(--muted);margin-left:auto">${m.unit}</span></div><canvas class="mini-chart-canvas" width="280" height="120"></canvas>`;
+    card.title = `Open ${m.label} in Data tab`;
+    card.innerHTML=`<div class="mini-chart-title"><span class="dot" style="background:${m.color}"></span>${m.label}<span style="font-size:10px;color:var(--muted);margin-left:auto">${m.unit}</span><span class="mini-chart-goto">↗</span></div><canvas class="mini-chart-canvas" width="280" height="120"></canvas>`;
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => openInDataTab(m.field, tFrom, tTo));
+    card.addEventListener('mouseenter', () => card.style.borderColor = m.color + '60');
+    card.addEventListener('mouseleave', () => card.style.borderColor = '');
     grid.appendChild(card);
     requestAnimationFrame(()=>{
       const canvas=card.querySelector('canvas');
