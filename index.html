@@ -658,20 +658,10 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:2px
     <nav class="top-tabs">
       <button class="top-tab active" id="tabOverview" onclick="switchTab('overview')">Overview</button>
       <button class="top-tab" id="tabData" onclick="switchTab('data')">Data</button>
+      <button class="top-tab" id="tabMap" onclick="switchTab('map')">Map</button>
       <button class="top-tab" id="tabCalc" onclick="switchTab('calc')">Calculations</button>
       <button class="top-tab" id="tabLapAnalysis" onclick="switchTab('lapanalysis')">Lap Analysis</button>
     </nav>
-    <!-- Graph / Map view toggle — only visible in Data tab -->
-    <div class="view-toggle" id="viewToggle">
-      <button class="view-btn on" id="viewBtnGraph" onclick="setDataView('graph')">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Graph
-      </button>
-      <button class="view-btn" id="viewBtnMap" onclick="setDataView('map')">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
-        Map
-      </button>
-    </div>
     <div class="header-search">
       <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -847,6 +837,9 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:2px
           </div>
         </div>
       </div>
+
+      <!-- Map tab -->
+      <div id="mapTab" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;"></div>
 
       <!-- Calculations tab -->
       <div id="calcTab">
@@ -1890,38 +1883,7 @@ function dtGet(id) {
 // ─── DATA VIEW (Graph vs Map) ─────────────────────────────────────────────────
 let currentDataView = 'graph';
 
-function setDataView(view) {
-  currentDataView = view;
-  document.getElementById('viewBtnGraph').classList.toggle('on', view === 'graph');
-  document.getElementById('viewBtnMap').classList.toggle('on', view === 'map');
-
-  if (view === 'map') {
-    // Hide sidebar
-    document.getElementById('sidebar').classList.add('hidden');
-    document.getElementById('sidebarToggle').classList.add('hidden');
-    activateMap();
-  } else {
-    // Show sidebar, restore graph
-    document.getElementById('sidebar').classList.remove('hidden');
-    document.getElementById('sidebarToggle').classList.remove('hidden');
-    // Clear map
-    stopReplay();
-    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
-    mapPolylines = []; replayMarker = null; mapFitted = false;
-    // Restore graph panel
-    const area = document.getElementById('mainArea');
-    if (activeFields.size > 0) {
-      area.innerHTML = '';
-      const pp = document.createElement('div');
-      pp.id = 'plotPanel'; pp.className = 'plot-panel';
-      area.appendChild(pp);
-      buildChartPanel();
-      if (staticMode) render(); else startLoop();
-    } else {
-      area.innerHTML = '<div class="plot-panel"><div class="plot-empty"><div class="plot-empty-hint">Select a signal from the sidebar to view its plot</div><div class="plot-empty-sub">Hold Ctrl / ⌘ to overlay up to 3 signals</div></div></div>';
-    }
-  }
-}
+function setDataView(view) { /* map is now its own tab */ }
 
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
 let activeTab = 'overview';
@@ -1930,14 +1892,15 @@ function switchTab(tab) {
   activeTab = tab;
   document.getElementById('tabOverview').classList.toggle('active', tab==='overview');
   document.getElementById('tabData').classList.toggle('active', tab==='data');
+  document.getElementById('tabMap').classList.toggle('active', tab==='map');
   document.getElementById('tabCalc').classList.toggle('active', tab==='calc');
   document.getElementById('tabLapAnalysis').classList.toggle('active', tab==='lapanalysis');
-  document.getElementById('viewToggle').classList.toggle('hidden', tab!=='data');
   document.getElementById('signalSearch').closest('.header-search').classList.toggle('hidden', tab!=='data');
 
   // hide all panels
   document.getElementById('overviewTab').classList.remove('active');
   document.getElementById('dataTab').classList.add('hidden');
+  document.getElementById('mapTab').style.display = 'none';
   document.getElementById('calcTab').classList.remove('active');
   document.getElementById('lapAnalysisTab').classList.add('hidden');
   document.getElementById('sidebar').classList.add('hidden');
@@ -1946,23 +1909,87 @@ function switchTab(tab) {
   if (tab === 'overview') {
     document.getElementById('overviewTab').classList.add('active');
     stopLoop();
+    stopReplay();
+    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+    mapPolylines = []; replayMarker = null; mapFitted = false;
     startOverviewLoop();
   } else if (tab === 'data') {
     stopOverviewLoop();
+    stopReplay();
+    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+    mapPolylines = []; replayMarker = null; mapFitted = false;
     document.getElementById('dataTab').classList.remove('hidden');
-    if (currentDataView === 'graph') {
-      document.getElementById('sidebar').classList.remove('hidden');
-      document.getElementById('sidebarToggle').classList.remove('hidden');
-    }
+    document.getElementById('sidebar').classList.remove('hidden');
+    document.getElementById('sidebarToggle').classList.remove('hidden');
     if (activeFields.size > 0 && !staticMode) startLoop();
-    if (leafletMap) leafletMap.invalidateSize();
+  } else if (tab === 'map') {
+    stopOverviewLoop(); stopLoop();
+    stopReplay();
+    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+    mapPolylines = []; replayMarker = null; mapFitted = false;
+    const mapTabEl = document.getElementById('mapTab');
+    mapTabEl.style.display = 'flex';
+    // Build map UI inside mapTab
+    const metricOpts = SIGNALS.map(m =>
+      `<option value="${m.field}" ${m.field === colorByField ? 'selected' : ''}>${m.label}</option>`
+    ).join('');
+    mapTabEl.innerHTML = `
+      <div class="map-toolbar">
+        <div class="map-toolbar-row1">
+          <span class="plot-name">GPS Track</span>
+          <div class="color-by">
+            <span class="color-by-label">Color by</span>
+            <select id="colorBySelect" onchange="setColorBy(this.value)">${metricOpts}</select>
+          </div>
+          <div class="map-legend">
+            <span class="legend-lo" id="legendLo">low</span>
+            <div class="legend-grad"></div>
+            <span class="legend-hi" id="legendHi">high</span>
+          </div>
+        </div>
+        <div class="map-toolbar-row2">
+          <div class="scrubber-wrap">
+            <span class="scrubber-label">Start</span>
+            <span id="dtMapStart" class="dt-picker"></span>
+            <input type="range" id="scrubStart" min="0" max="1000" value="0" step="1" oninput="onScrub('start')">
+          </div>
+          <div class="scrubber-wrap">
+            <span class="scrubber-label">End</span>
+            <span id="dtMapEnd" class="dt-picker"></span>
+            <input type="range" id="scrubEnd" min="0" max="1000" value="1000" step="1" oninput="onScrub('end')">
+          </div>
+          <button class="replay-btn" id="replayBtn" onclick="toggleReplay()">▶ Replay</button>
+          <div class="speed-wrap">
+            <span class="speed-label">Speed</span>
+            <select class="speed-select" id="replaySpeed">
+              <option value="1">1×</option><option value="5">5×</option>
+              <option value="10" selected>10×</option><option value="30">30×</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="map-wrap"><div id="leafletMap"></div></div>
+    `;
+    leafletMap = L.map('leafletMap', { zoomControl:true, attributionControl:true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution:'© OpenStreetMap contributors', maxZoom:19,
+    }).addTo(leafletMap);
+    dtInit('dtMapStart', () => onMapPickerChange('start'));
+    dtInit('dtMapEnd',   () => onMapPickerChange('end'));
+    drawMapTrace(); syncTimeInputs();
   } else if (tab === 'lapanalysis') {
     stopOverviewLoop(); stopLoop();
+    stopReplay();
+    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+    mapPolylines = []; replayMarker = null; mapFitted = false;
     document.getElementById('lapAnalysisTab').classList.remove('hidden');
     populateLaMetricSelect();
     renderLapAnalysis();
   } else {
     stopOverviewLoop();
+    stopReplay();
+    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+    mapPolylines = []; replayMarker = null; mapFitted = false;
     document.getElementById('calcTab').classList.add('active');
     stopLoop();
     if (!dtState['dtCalcFrom']) dtInit('dtCalcFrom', null);
