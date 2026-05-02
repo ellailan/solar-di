@@ -912,6 +912,7 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:2px
           <div class="la-empty hidden" id="laEmpty"></div>
           <div class="la-chart-wrap hidden" id="laChartWrap">
             <canvas id="laCanvas"></canvas>
+            <div id="laTooltip" style="display:none;position:absolute;pointer-events:none;background:var(--navy2);border:1px solid var(--border3);padding:6px 10px;font-family:var(--mono);font-size:11px;color:var(--text);white-space:nowrap;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.4);"></div>
           </div>
           <div class="la-stats-row hidden" id="laStatsRow"></div>
         </div>
@@ -2452,7 +2453,7 @@ function getLapData() {
   const lapIdxHistory = history['LapIndex'];
   if (!lapIdxHistory || !lapIdxHistory.length) return {};
 
-  const lapMap = {}; // lap# -> { field -> values[] }
+  const lapMap = {}; // lap# -> { field -> { values[], times[] } }
 
   SIGNALS.forEach(sig => {
     const h = history[sig.field];
@@ -2462,8 +2463,9 @@ function getLapData() {
       const lap = Math.round(lapIdxHistory[i].v);
       if (lap < 1) continue;
       if (!lapMap[lap]) lapMap[lap] = {};
-      if (!lapMap[lap][sig.field]) lapMap[lap][sig.field] = [];
-      lapMap[lap][sig.field].push(h[i].v);
+      if (!lapMap[lap][sig.field]) lapMap[lap][sig.field] = { values: [], times: [] };
+      lapMap[lap][sig.field].values.push(h[i].v);
+      lapMap[lap][sig.field].times.push(h[i].t);
     }
   });
 
@@ -2478,6 +2480,60 @@ function aggregate(values, mode) {
     case 'max':    return Math.max(...values);
     case 'min':    return Math.min(...values);
   }
+}
+
+// Find the timestamp when a field hit its min or max within a lap
+function lapExtremeTime(lapEntry, field, mode) {
+  if (!lapEntry || !lapEntry[field]) return null;
+  const { values, times } = lapEntry[field];
+  if (!values.length) return null;
+  let idx = 0;
+  for (let i = 1; i < values.length; i++) {
+    if (mode === 'max' ? values[i] > values[idx] : values[i] < values[idx]) idx = i;
+  }
+  return times[idx] || null;
+}
+
+// ─── LAP ANALYSIS TOOLTIP ─────────────────────────────────────────────────────
+let laHitData = [];
+let laHitSig = null;
+
+function laCanvasHover(e, canvas) {
+  const tt = document.getElementById('laTooltip');
+  if (!tt || !laHitData.length) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const HIT_RADIUS = 18;
+  let closest = null, closestDist = Infinity;
+  laHitData.forEach(h => {
+    const d = Math.sqrt((mx - h.x) ** 2 + (my - h.y) ** 2);
+    if (d < HIT_RADIUS && d < closestDist) { closest = h; closestDist = d; }
+  });
+  if (!closest) { tt.style.display = 'none'; canvas.style.cursor = ''; return; }
+  canvas.style.cursor = 'crosshair';
+  const dec = laHitSig ? (laHitSig.decimals <= 1 ? 1 : 2) : 2;
+  const unit = laHitSig ? laHitSig.unit : '';
+  const color = laHitSig ? laHitSig.color : 'var(--gold)';
+  let timeStr = '';
+  if (closest.point.extremeT) {
+    const d = new Date(closest.point.extremeT);
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    const ss = String(d.getSeconds()).padStart(2,'0');
+    timeStr = `<div style="color:var(--muted);margin-top:3px">${hh}:${mm}:${ss}</div>`;
+  }
+  tt.innerHTML = `<span style="color:var(--muted)">Lap </span><span style="color:${color};font-weight:600">${closest.point.lap}</span><span style="color:var(--border3)"> · </span><span style="color:${color};font-weight:600">${closest.point.agg.toFixed(dec)}</span><span style="color:var(--muted)"> ${unit}</span>${timeStr}`;
+  // Position tooltip above/right of cursor, flip if near edge
+  const wrap = canvas.parentElement.getBoundingClientRect();
+  let tx = e.clientX - wrap.left + 14;
+  let ty = e.clientY - wrap.top - 38;
+  tt.style.display = 'block';
+  const ttW = tt.offsetWidth, ttH = tt.offsetHeight;
+  if (tx + ttW > wrap.width - 8) tx = e.clientX - wrap.left - ttW - 14;
+  if (ty < 4) ty = e.clientY - wrap.top + 14;
+  tt.style.left = tx + 'px';
+  tt.style.top  = ty + 'px';
 }
 
 function renderLapAnalysis() {
@@ -2502,9 +2558,20 @@ function renderLapAnalysis() {
   const laps = Object.keys(lapMap).map(Number).sort((a,b)=>a-b);
 
   const points = laps.map(lap => {
-    const vals = lapMap[lap]?.[field];
+    const entry = lapMap[lap];
+    const vals = entry?.[field]?.values;
+    const times = entry?.[field]?.times;
     const agg = aggregate(vals, laAgg);
-    return { lap, agg, count: vals ? vals.length : 0 };
+    let pointT = null;
+    if (vals && times && vals.length) {
+      if (laAgg === 'min' || laAgg === 'max') {
+        pointT = lapExtremeTime(entry, field, laAgg);
+      } else {
+        // Use the midpoint timestamp of the lap
+        pointT = null;
+      }
+    }
+    return { lap, agg, count: vals ? vals.length : 0, extremeT: pointT };
   }).filter(p => p.agg !== null);
 
   // Apply lap range filter
@@ -2621,15 +2688,39 @@ function renderLapAnalysis() {
     const lapRange = visiblePoints.length < points.length
       ? ` (laps ${visiblePoints[0].lap}–${visiblePoints[visiblePoints.length-1].lap})` : '';
     ctx.fillText(aggLabel + ' ' + sig.label + ' per Lap' + lapRange, PAD.l, 6);
+
+    // Store hit data for tooltip
+    laHitData = visiblePoints.map(p => ({ x: toX(p.lap), y: toY(p.agg), point: p }));
+    laHitSig = sig;
+
+    // Attach hover listener (replace each time to stay fresh)
+    canvas.onmousemove = (e) => laCanvasHover(e, canvas);
+    canvas.onmouseleave = () => { const tt = document.getElementById('laTooltip'); if (tt) tt.style.display = 'none'; };
   });
 
   // Stats bar — computed over the visible window only
   const vals2 = visiblePoints.map(p => p.agg);
-  const best = laAgg === 'min' ? Math.min(...vals2) : Math.max(...vals2);
-  const worst = laAgg === 'min' ? Math.max(...vals2) : Math.min(...vals2);
+  const bestVal  = laAgg === 'min' ? Math.min(...vals2) : Math.max(...vals2);
+  const worstVal = laAgg === 'min' ? Math.max(...vals2) : Math.min(...vals2);
   const mean = vals2.reduce((a,b)=>a+b,0)/vals2.length;
   const trend = vals2.length >= 2 ? vals2[vals2.length-1] - vals2[0] : 0;
   const dec = sig.decimals <= 1 ? 1 : 2;
+
+  const bestPoint  = visiblePoints.find(p => p.agg === bestVal);
+  const worstPoint = visiblePoints.find(p => p.agg === worstVal);
+
+  function fmtExtremeTime(point) {
+    if (!point?.extremeT) return `Lap ${point?.lap ?? '—'}`;
+    const d = new Date(point.extremeT);
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    const ss = String(d.getSeconds()).padStart(2,'0');
+    return `${hh}:${mm}:${ss}`;
+  }
+
+  const showTime = laAgg === 'min' || laAgg === 'max';
+  const bestSub  = showTime ? `<div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px">${fmtExtremeTime(bestPoint)}</div>`  : '';
+  const worstSub = showTime ? `<div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px">${fmtExtremeTime(worstPoint)}</div>` : '';
 
   statsEl.innerHTML = `
     <div class="la-stat-card">
@@ -2642,11 +2733,13 @@ function renderLapAnalysis() {
     </div>
     <div class="la-stat-card">
       <div class="la-stat-card-label">Best</div>
-      <div class="la-stat-card-val" style="color:#3d9e6b">${best.toFixed(dec)}<span class="la-stat-card-unit">${sig.unit}</span></div>
+      <div class="la-stat-card-val" style="color:#3d9e6b">${bestVal.toFixed(dec)}<span class="la-stat-card-unit">${sig.unit}</span></div>
+      ${bestSub}
     </div>
     <div class="la-stat-card">
       <div class="la-stat-card-label">Worst</div>
-      <div class="la-stat-card-val" style="color:#c94f3e">${worst.toFixed(dec)}<span class="la-stat-card-unit">${sig.unit}</span></div>
+      <div class="la-stat-card-val" style="color:#c94f3e">${worstVal.toFixed(dec)}<span class="la-stat-card-unit">${sig.unit}</span></div>
+      ${worstSub}
     </div>
     <div class="la-stat-card">
       <div class="la-stat-card-label">Trend (first→last)</div>
