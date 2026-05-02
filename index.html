@@ -1804,10 +1804,12 @@ function dummyTick() {
   ds.Efficiency1Hour     = w(ds.Efficiency1Hour, 5, 0, 800);
   ds.Efficiency5Minute   = w(ds.Efficiency5Minute, 8, 0, 800);
   ds.EfficiencyLap       = w(ds.EfficiencyLap, 6, 0, 800);
-  // localization — lap advances every ~4 min of real time
-  const elapsedMin = (Date.now() - simStartTime) / 60000;
-  ds.LapIndex            = 4 + Math.floor(elapsedMin / 4); // laps 4+ after seeded 1-3
-  ds.TrackIndex          = w(ds.TrackIndex, 0.005, 0, 1);
+  // localization — lap advances every 4 min of real time, TrackIndex runs 0→1 within each lap
+  const LAP_DURATION_MS = 4 * 60 * 1000;
+  const elapsedMs = Date.now() - simStartTime;
+  const completedLaps = Math.floor(elapsedMs / LAP_DURATION_MS);
+  ds.LapIndex            = 4 + completedLaps; // laps 4+ after seeded 1-3
+  ds.TrackIndex          = (elapsedMs % LAP_DURATION_MS) / LAP_DURATION_MS;
   ds.LapIndexSpreadsheet = ds.LapIndex;
   ds.TrackDistSpreadsheet= ds.TrackIndex * 5040;
   // weather
