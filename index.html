@@ -376,6 +376,20 @@ header {
 .canvas-wrap { flex:1; position:relative; min-height:0; }
 #plotCanvas { position:absolute; inset:0; width:100%; height:100%; cursor:grab; }
 #plotCanvas.panning { cursor:grabbing; }
+#plotOverlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.plot-tooltip {
+  position:absolute; display:none; pointer-events:none;
+  background:var(--navy2); border:1px solid var(--border3);
+  padding:8px 12px; font-family:var(--mono); font-size:11px;
+  color:var(--text); white-space:nowrap; z-index:10;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+  min-width:140px;
+}
+.plot-tooltip-time { font-size:9px; color:var(--muted); letter-spacing:.06em; margin-bottom:6px; text-transform:uppercase; }
+.plot-tooltip-row { display:flex; align-items:center; gap:7px; margin-top:4px; }
+.plot-tooltip-dot { width:6px; height:6px; border-radius:1px; flex-shrink:0; }
+.plot-tooltip-label { color:var(--muted); font-size:10px; flex:1; }
+.plot-tooltip-val { font-size:12px; font-weight:500; }
 .chart-hint { position:absolute; bottom:30px; right:12px; font-family:var(--mono); font-size:9px; color:var(--muted); opacity:.5; pointer-events:none; letter-spacing:.05em; }
 
 /* ── STATIC MODE CONTROLS ── */
@@ -1179,7 +1193,7 @@ function buildChartPanel() {
       <span class="static-badge ${staticMode?'':'hidden'}" id="staticBadge">FROZEN</span>
     </div>
     <div id="signalDescBar" class="signal-desc-bar"></div>
-    <div class="canvas-wrap"><canvas id="plotCanvas"></canvas><div class="chart-hint">scroll to zoom · drag to pan · dbl-click to reset</div></div>
+    <div class="canvas-wrap"><canvas id="plotCanvas"></canvas><canvas id="plotOverlay"></canvas><div id="plotTooltip" class="plot-tooltip"></div><div class="chart-hint">scroll to zoom · drag to pan · dbl-click to reset</div></div>
   `;
   const winNumEl = document.getElementById('winNum');
   if (winNumEl) winNumEl.addEventListener('change', function() {
@@ -1261,6 +1275,9 @@ function applyStaticRange() {
   }
   staticFrom = f; staticTo = t; stopLoop(); render();
 }
+
+// Cached render state for tooltip crosshair
+let _renderState = null;
 
 // ─── CANVAS RENDERER ─────────────────────────────────────────────────────────
 function render() {
@@ -1378,6 +1395,9 @@ function render() {
     }
     ctx.restore();
   });
+
+  // Cache state for tooltip
+  _renderState = { tStart, tEnd, tSpan, cX, cY, cW, cH, seriesData, isStatic };
 }
 
 // ─── CHART INTERACTIONS (pan & zoom) ─────────────────────────────────────────
@@ -1506,6 +1526,101 @@ function attachChartInteractions() {
   }, { passive: false });
 
   canvas.addEventListener('touchend', () => { lastTouches = null; });
+
+  // ── Tooltip crosshair ────────────────────────────────────────────────────────
+  const overlay = document.getElementById('plotOverlay');
+  const tooltip = document.getElementById('plotTooltip');
+
+  function syncOverlaySize() {
+    if (!overlay) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth, H = canvas.offsetHeight;
+    overlay.width = W * dpr; overlay.height = H * dpr;
+    overlay.style.width = W + 'px'; overlay.style.height = H + 'px';
+  }
+
+  function drawCrosshair(mouseX, mouseY) {
+    if (!overlay || !_renderState) return;
+    const { tStart, tSpan, cX, cY, cW, cH, seriesData } = _renderState;
+    const dpr = window.devicePixelRatio || 1;
+    syncOverlaySize();
+    const ctx2 = overlay.getContext('2d');
+    ctx2.clearRect(0, 0, overlay.width, overlay.height);
+
+    // Only show inside chart area
+    if (mouseX < cX || mouseX > cX + cW || mouseY < cY || mouseY > cY + cH) {
+      if (tooltip) tooltip.style.display = 'none';
+      return;
+    }
+
+    // Time at cursor
+    const tCursor = tStart + ((mouseX - cX) / cW) * tSpan;
+
+    // Vertical crosshair line
+    ctx2.save(); ctx2.scale(dpr, dpr);
+    ctx2.strokeStyle = '#ffffff18'; ctx2.lineWidth = 1; ctx2.setLineDash([4, 4]);
+    ctx2.beginPath(); ctx2.moveTo(mouseX, cY); ctx2.lineTo(mouseX, cY + cH); ctx2.stroke();
+    ctx2.setLineDash([]);
+
+    // For each series, find nearest point and draw dot
+    const rows = seriesData.map(s => {
+      const { m, pts, yMin, yRange } = s;
+      if (!pts.length) return null;
+      // Binary search nearest point by time
+      let lo = 0, hi = pts.length - 1;
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (pts[mid].t < tCursor) lo = mid + 1; else hi = mid; }
+      // Pick closer of lo and lo-1
+      const p = (lo > 0 && Math.abs(pts[lo-1].t - tCursor) < Math.abs(pts[lo].t - tCursor)) ? pts[lo-1] : pts[lo];
+      const toY = v => cY + cH - ((v - yMin) / yRange) * cH;
+      const px = cX + ((p.t - tStart) / tSpan) * cW;
+      const py = toY(p.v);
+      // Glow
+      ctx2.beginPath(); ctx2.arc(px, py, 7, 0, Math.PI * 2);
+      ctx2.fillStyle = m.color + '22'; ctx2.fill();
+      // Dot
+      ctx2.beginPath(); ctx2.arc(px, py, 3.5, 0, Math.PI * 2);
+      ctx2.fillStyle = m.color; ctx2.fill();
+      ctx2.strokeStyle = '#0d1b2a'; ctx2.lineWidth = 1.5; ctx2.stroke();
+      return { m, p };
+    }).filter(Boolean);
+    ctx2.restore();
+
+    // Tooltip content
+    if (!tooltip || !rows.length) return;
+    const d = new Date(rows[0].p.t);
+    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+    tooltip.innerHTML = `<div class="plot-tooltip-time">${timeStr}</div>` + rows.map(r =>
+      `<div class="plot-tooltip-row">
+        <span class="plot-tooltip-dot" style="background:${r.m.color}"></span>
+        <span class="plot-tooltip-label">${r.m.label}</span>
+        <span class="plot-tooltip-val" style="color:${r.m.color}">${r.p.v.toFixed(r.m.decimals <= 1 ? 1 : 2)}<span style="font-size:9px;color:var(--muted);margin-left:3px">${r.m.unit}</span></span>
+      </div>`
+    ).join('');
+
+    // Position tooltip — keep it inside the canvas-wrap
+    const wrap = canvas.parentElement;
+    const wRect = wrap.getBoundingClientRect();
+    const cRect = canvas.getBoundingClientRect();
+    const relX = mouseX + (cRect.left - wRect.left);
+    const relY = mouseY + (cRect.top  - wRect.top);
+    const ttW = 180, ttH = 28 + rows.length * 26;
+    const left = relX + 14 + ttW > wRect.width  ? relX - ttW - 10 : relX + 14;
+    const top  = relY - ttH / 2 < 0 ? 4 : relY + ttH / 2 > wRect.height ? wRect.height - ttH - 4 : relY - ttH / 2;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top  = top  + 'px';
+    tooltip.style.display = 'block';
+  }
+
+  canvas.addEventListener('mousemove', e => {
+    if (dragStartX !== null) return; // don't show tooltip while panning
+    const rect = canvas.getBoundingClientRect();
+    drawCrosshair(e.clientX - rect.left, e.clientY - rect.top);
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    if (overlay) { const ctx2 = overlay.getContext('2d'); ctx2.clearRect(0, 0, overlay.width, overlay.height); }
+    if (tooltip) tooltip.style.display = 'none';
+  });
 }
 
 
