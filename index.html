@@ -171,12 +171,20 @@ header {
    OVERVIEW TAB
 ══════════════════════════════════════════════ */
 .ov-tab {
-  flex:1; min-height:0; overflow:hidden;
+  flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
   background:var(--navy);
   display:none;
-  align-items:center; justify-content:center;
+  justify-content:center;
 }
 .ov-tab.active { display:flex; }
+.ov-tab::-webkit-scrollbar { width:2px; }
+.ov-tab::-webkit-scrollbar-track { background:transparent; }
+.ov-tab::-webkit-scrollbar-thumb { background:var(--border3); }
+
+.ov-tab-inner {
+  display:flex; align-items:center; justify-content:center;
+  min-height:100%; width:100%; padding:16px 0;
+}
 
 .ov-layout {
   display:grid;
@@ -192,10 +200,30 @@ header {
 .ov-layout .ov-card:nth-child(6) { grid-column: span 1; }
 .ov-layout .ov-card:nth-child(7) { grid-column: span 2; }
 
+/* 2-column layout for medium screens */
+@media (max-width: 860px) {
+  .ov-layout {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ov-layout .ov-card:nth-child(5) { grid-column: span 1; }
+  .ov-layout .ov-card:nth-child(6) { grid-column: span 1; }
+  .ov-layout .ov-card:nth-child(7) { grid-column: span 2; }
+}
+
+/* 1-column layout for narrow screens */
+@media (max-width: 480px) {
+  .ov-layout {
+    grid-template-columns: 1fr;
+  }
+  .ov-layout .ov-card:nth-child(5),
+  .ov-layout .ov-card:nth-child(6),
+  .ov-layout .ov-card:nth-child(7) { grid-column: span 1; }
+}
+
 .ov-card {
   background:var(--navy2);
-  padding:22px 24px;
-  display:flex; flex-direction:column; gap:14px;
+  padding:18px 20px;
+  display:flex; flex-direction:column; gap:12px;
   position:relative;
 }
 .ov-card::before {
@@ -209,16 +237,16 @@ header {
   letter-spacing:.12em; text-transform:uppercase; color:var(--muted);
 }
 
-.ov-big { display:flex; align-items:baseline; gap:8px; }
-.ov-big-val { font-family:var(--mono); font-size:52px; font-weight:400; line-height:1; color:var(--text); letter-spacing:-.02em; }
+.ov-big { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.ov-big-val { font-family:var(--mono); font-size:clamp(32px, 5vw, 52px); font-weight:400; line-height:1; color:var(--text); letter-spacing:-.02em; }
 .ov-big-unit { font-family:var(--mono); font-size:13px; color:var(--muted); }
 
-.ov-row-stats { display:flex; gap:0; }
-.ov-stat { display:flex; flex-direction:column; align-items:center; padding:8px 14px; border-right:1px solid var(--border2); flex:1; }
+.ov-row-stats { display:flex; gap:0; flex-wrap:wrap; }
+.ov-stat { display:flex; flex-direction:column; align-items:center; padding:8px 10px; border-right:1px solid var(--border2); flex:1; min-width:60px; }
 .ov-stat:last-child { border-right:none; }
 .ov-stat:first-child { padding-left:0; }
-.ov-stat-label { font-size:10px; color:var(--muted); font-weight:400; text-align:center; margin-bottom:6px; white-space:nowrap; }
-.ov-stat-val { font-family:var(--mono); font-size:26px; font-weight:400; color:var(--text); line-height:1; }
+.ov-stat-label { font-size:10px; color:var(--muted); font-weight:400; text-align:center; margin-bottom:6px; white-space:normal; line-height:1.3; }
+.ov-stat-val { font-family:var(--mono); font-size:clamp(18px, 3vw, 26px); font-weight:400; color:var(--text); line-height:1; }
 .ov-stat-unit { font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:4px; }
 
 /* Progress bars */
@@ -229,14 +257,14 @@ header {
 .ov-track-bar-bg { height:2px; background:var(--navy5); overflow:hidden; margin-top:6px; }
 .ov-track-bar-fill { height:100%; background:linear-gradient(90deg,#3d9e6b,#c8a84b); transition:width .5s ease; }
 
-.ov-pills { display:flex; align-items:center; gap:8px; }
+.ov-pills { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .ov-state-pill {
   display:flex; align-items:center; gap:6px;
   background:var(--navy3); border:1px solid var(--border2);
-  border-radius:1px; padding:5px 12px;
+  border-radius:1px; padding:5px 10px;
   font-family:var(--mono); font-size:9px; font-weight:500;
   color:var(--muted); transition:background .2s,border-color .2s,color .2s;
-  letter-spacing:.06em; text-transform:uppercase;
+  letter-spacing:.06em; text-transform:uppercase; white-space:nowrap;
 }
 .ov-state-pill.active-brake { background:#c94f3e0e; border-color:#c94f3e38; color:#c94f3e; }
 .ov-state-pill.active-regen { background:#3d9e6b0e; border-color:#3d9e6b38; color:#3d9e6b; }
@@ -697,6 +725,7 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:2px
 
       <!-- Overview tab -->
       <div id="overviewTab" class="ov-tab">
+        <div class="ov-tab-inner">
         <div class="ov-layout">
 
           <!-- 1: SOC -->
@@ -823,10 +852,9 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:2px
             </div>
           </div>
 
-        </div>
+        </div><!-- /.ov-layout -->
+        </div><!-- /.ov-tab-inner -->
       </div>
-
-      <!-- Data tab -->
       <div id="dataTab" class="hidden">
         <div id="mainArea">
           <div class="plot-panel" id="plotPanel">
