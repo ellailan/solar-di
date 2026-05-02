@@ -374,7 +374,9 @@ header {
 
 /* canvas */
 .canvas-wrap { flex:1; position:relative; min-height:0; }
-#plotCanvas { position:absolute; inset:0; width:100%; height:100%; }
+#plotCanvas { position:absolute; inset:0; width:100%; height:100%; cursor:grab; }
+#plotCanvas.panning { cursor:grabbing; }
+.chart-hint { position:absolute; bottom:30px; right:12px; font-family:var(--mono); font-size:9px; color:var(--muted); opacity:.5; pointer-events:none; letter-spacing:.05em; }
 
 /* ── STATIC MODE CONTROLS ── */
 .mode-toggle {
@@ -1174,7 +1176,7 @@ function buildChartPanel() {
       <span class="static-badge ${staticMode?'':'hidden'}" id="staticBadge">FROZEN</span>
     </div>
     <div id="signalDescBar" class="signal-desc-bar"></div>
-    <div class="canvas-wrap"><canvas id="plotCanvas"></canvas></div>
+    <div class="canvas-wrap"><canvas id="plotCanvas"></canvas><div class="chart-hint">scroll to zoom · drag to pan · dbl-click to reset</div></div>
   `;
   const winNumEl = document.getElementById('winNum');
   if (winNumEl) winNumEl.addEventListener('change', function() {
@@ -1186,6 +1188,7 @@ function buildChartPanel() {
   prefillStaticInputs();
   updateChartLegend();
   updateSignalDesc();
+  attachChartInteractions();
 }
 
 function updateChartLegend() {
@@ -1373,6 +1376,135 @@ function render() {
     ctx.restore();
   });
 }
+
+// ─── CHART INTERACTIONS (pan & zoom) ─────────────────────────────────────────
+function attachChartInteractions() {
+  const canvas = document.getElementById('plotCanvas');
+  if (!canvas) return;
+
+  // Helpers to get/set the current view window as absolute timestamps
+  function getWindow() {
+    if (staticMode && staticFrom && staticTo) return { f: staticFrom, t: staticTo };
+    const t = Date.now();
+    return { f: t - windowSec * 1000, t };
+  }
+
+  function setWindow(f, t) {
+    const minSpan = 5000;       // 5 s minimum
+    const maxSpan = MAX_MS;     // 1 hr maximum
+    let span = t - f;
+    if (span < minSpan) { const mid = (f + t) / 2; f = mid - minSpan / 2; t = mid + minSpan / 2; span = minSpan; }
+    if (span > maxSpan) { const mid = (f + t) / 2; f = mid - maxSpan / 2; t = mid + maxSpan / 2; }
+    // Clamp to available data
+    const dataEnd = Date.now();
+    if (t > dataEnd) { f -= (t - dataEnd); t = dataEnd; }
+    staticFrom = f; staticTo = t;
+    if (!staticMode) {
+      staticMode = true;
+      document.getElementById('btnLive')  ?.classList.remove('on');
+      document.getElementById('btnStatic')?.classList.add('on');
+      document.getElementById('staticInputs')?.classList.remove('hidden');
+      document.getElementById('liveInputs')  ?.classList.add('hidden');
+      document.getElementById('staticBadge') ?.classList.remove('hidden');
+      stopLoop();
+    }
+    prefillStaticInputs();
+    render();
+  }
+
+  // ── Wheel zoom ──────────────────────────────────────────────────────────────
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const PAD_L = Math.min(44 * Math.max(activeFields.size, 1), 140);
+    const cW = rect.width - PAD_L - 12;
+    const mouseX = e.clientX - rect.left - PAD_L;
+    const frac = Math.max(0, Math.min(1, mouseX / cW)); // 0=left edge, 1=right edge
+
+    const { f, t } = getWindow();
+    const span = t - f;
+    const factor = e.deltaY > 0 ? 1.04 : 0.96; // scroll down = zoom out
+    const newSpan = Math.max(5000, Math.min(MAX_MS, span * factor));
+    const pivot = f + frac * span; // keep time under cursor fixed
+    setWindow(pivot - frac * newSpan, pivot + (1 - frac) * newSpan);
+  }, { passive: false });
+
+  // ── Mouse pan ───────────────────────────────────────────────────────────────
+  let dragStartX = null, dragStartWindow = null;
+
+  canvas.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    dragStartX = e.clientX;
+    dragStartWindow = getWindow();
+    canvas.classList.add('panning');
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (dragStartX === null) return;
+    const rect = canvas.getBoundingClientRect();
+    const PAD_L = Math.min(44 * Math.max(activeFields.size, 1), 140);
+    const cW = rect.width - PAD_L - 12;
+    if (cW <= 0) return;
+    const dx = e.clientX - dragStartX;
+    const { f, t } = dragStartWindow;
+    const span = t - f;
+    const shift = -(dx / cW) * span * 0.3;
+    setWindow(f + shift, t + shift);
+  });
+
+  window.addEventListener('mouseup', () => {
+    dragStartX = null; dragStartWindow = null;
+    canvas.classList.remove('panning');
+  });
+
+  // ── Double-click: reset to live ─────────────────────────────────────────────
+  canvas.addEventListener('dblclick', () => {
+    staticFrom = null; staticTo = null;
+    setMode('live');
+  });
+
+  // ── Touch: pinch-zoom + single-finger pan ───────────────────────────────────
+  let lastTouches = null;
+
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    lastTouches = Array.from(e.touches).map(t => ({ x: t.clientX, y: t.clientY }));
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const touches = Array.from(e.touches).map(t => ({ x: t.clientX, y: t.clientY }));
+    if (!lastTouches || touches.length !== lastTouches.length) { lastTouches = touches; return; }
+
+    const rect = canvas.getBoundingClientRect();
+    const PAD_L = Math.min(44 * Math.max(activeFields.size, 1), 140);
+    const cW = rect.width - PAD_L - 12;
+    const { f, t } = getWindow();
+    const span = t - f;
+
+    if (touches.length === 1) {
+      // Pan
+      const dx = touches[0].x - lastTouches[0].x;
+      const shift = -(dx / cW) * span * 0.3;
+      setWindow(f + shift, t + shift);
+    } else if (touches.length === 2) {
+      // Pinch zoom
+      const prevDist = Math.abs(lastTouches[1].x - lastTouches[0].x);
+      const currDist = Math.abs(touches[1].x - touches[0].x);
+      if (prevDist === 0) { lastTouches = touches; return; }
+      const scale = prevDist / currDist; // fingers spreading = zoom in = scale < 1 → smaller span
+      const midX = ((touches[0].x + touches[1].x) / 2) - rect.left - PAD_L;
+      const frac = Math.max(0, Math.min(1, midX / cW));
+      const newSpan = Math.max(5000, Math.min(MAX_MS, span * scale));
+      const pivot = f + frac * span;
+      setWindow(pivot - frac * newSpan, pivot + (1 - frac) * newSpan);
+    }
+    lastTouches = touches;
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', () => { lastTouches = null; });
+}
+
 
 function loop()      { render(); rafId = requestAnimationFrame(loop); }
 function startLoop() { if (!rafId) rafId = requestAnimationFrame(loop); }
