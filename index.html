@@ -1555,7 +1555,7 @@ function toggleReplay() {
     replayIdx++;
     if (replayIdx >= pts.length) { stopReplay(); return; }
     replayMarker.setLatLng([pts[replayIdx].lat,pts[replayIdx].lon]);
-    const speedMul = parseFloat(document.getElementById('replaySpeed')?.value||10);
+    const speedMul = 10;
     const dtReal = replayIdx < pts.length-1 ? pts[replayIdx+1].t - pts[replayIdx].t : 500;
     replayTimer = setTimeout(step, Math.max(16, dtReal/speedMul));
   }
@@ -1948,24 +1948,25 @@ function switchTab(tab) {
           </div>
         </div>
         <div class="map-toolbar-row2">
-          <div class="scrubber-wrap">
-            <span class="scrubber-label">Start</span>
+          <div class="calc-range-mode">
+            <button class="calc-mode-btn on" id="mapModeTime" onclick="setMapMode('time')">Time</button>
+            <button class="calc-mode-btn" id="mapModeLap" onclick="setMapMode('lap')">Lap</button>
+          </div>
+          <div class="calc-inputs-time" id="mapInputsTime">
+            <span class="ts-label">From</span>
             <span id="dtMapStart" class="dt-picker"></span>
-            <input type="range" id="scrubStart" min="0" max="1000" value="0" step="1" oninput="onScrub('start')">
-          </div>
-          <div class="scrubber-wrap">
-            <span class="scrubber-label">End</span>
+            <span class="ts-label">To</span>
             <span id="dtMapEnd" class="dt-picker"></span>
-            <input type="range" id="scrubEnd" min="0" max="1000" value="1000" step="1" oninput="onScrub('end')">
           </div>
+          <div class="calc-inputs-lap hidden" id="mapInputsLap">
+            <span class="ts-label">Lap</span>
+            <input class="lap-input" type="number" id="mapLapFrom" min="0" max="999" value="1">
+            <span class="lap-range-sep" id="mapLapRangeSep">→</span>
+            <input class="lap-input" type="number" id="mapLapTo" min="0" max="999" value="1">
+            <button class="lap-single-toggle" id="mapLapSingleBtn" onclick="toggleMapLapSingle()">Single lap</button>
+          </div>
+          <button class="ts-apply" onclick="applyMapRange()">Apply</button>
           <button class="replay-btn" id="replayBtn" onclick="toggleReplay()">▶ Replay</button>
-          <div class="speed-wrap">
-            <span class="speed-label">Speed</span>
-            <select class="speed-select" id="replaySpeed">
-              <option value="1">1×</option><option value="5">5×</option>
-              <option value="10" selected>10×</option><option value="30">30×</option>
-            </select>
-          </div>
         </div>
       </div>
       <div class="map-wrap"><div id="leafletMap"></div></div>
@@ -1974,9 +1975,21 @@ function switchTab(tab) {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution:'© OpenStreetMap contributors', maxZoom:19,
     }).addTo(leafletMap);
-    dtInit('dtMapStart', () => onMapPickerChange('start'));
-    dtInit('dtMapEnd',   () => onMapPickerChange('end'));
-    drawMapTrace(); syncTimeInputs();
+    mapTabMode = 'time';
+    mapLapSingleMode = false;
+    dtInit('dtMapStart', null);
+    dtInit('dtMapEnd',   null);
+    // Prefill time pickers to full history range
+    if (gpsHistory.length >= 2) {
+      dtSet('dtMapStart', gpsHistory[0].t);
+      dtSet('dtMapEnd',   gpsHistory[gpsHistory.length-1].t);
+    } else {
+      const now = Date.now();
+      dtSet('dtMapStart', now - 60000);
+      dtSet('dtMapEnd',   now);
+    }
+    mapRangeStart = 0; mapRangeEnd = 1;
+    drawMapTrace();
   } else if (tab === 'lapanalysis') {
     stopOverviewLoop(); stopLoop();
     stopReplay();
@@ -2004,7 +2017,51 @@ function prefillCalcInputs() {
   dtSet('dtCalcTo',   now);
 }
 
-// ─── CALC MODE ────────────────────────────────────────────────────────────────
+// ─── MAP MODE (Time vs Lap) ────────────────────────────────────────────────────
+let mapTabMode = 'time';
+let mapLapSingleMode = false;
+
+function setMapMode(mode) {
+  mapTabMode = mode;
+  document.getElementById('mapModeTime')?.classList.toggle('on', mode==='time');
+  document.getElementById('mapModeLap')?.classList.toggle('on', mode==='lap');
+  document.getElementById('mapInputsTime')?.classList.toggle('hidden', mode!=='time');
+  document.getElementById('mapInputsLap')?.classList.toggle('hidden', mode!=='lap');
+}
+
+function toggleMapLapSingle() {
+  mapLapSingleMode = !mapLapSingleMode;
+  document.getElementById('mapLapSingleBtn')?.classList.toggle('on', mapLapSingleMode);
+  const sep = document.getElementById('mapLapRangeSep');
+  const toInput = document.getElementById('mapLapTo');
+  if (sep) sep.style.display = mapLapSingleMode ? 'none' : '';
+  if (toInput) toInput.style.display = mapLapSingleMode ? 'none' : '';
+}
+
+function applyMapRange() {
+  const n = gpsHistory.length;
+  if (n < 2) return;
+  const tFirst = gpsHistory[0].t, tLast = gpsHistory[n-1].t, tSpan = tLast - tFirst || 1;
+
+  if (mapTabMode === 'time') {
+    const f = dtGet('dtMapStart'), t = dtGet('dtMapEnd');
+    if (!f || !t || f >= t) return;
+    mapRangeStart = Math.max(0, Math.min(1, (f - tFirst) / tSpan));
+    mapRangeEnd   = Math.max(0, Math.min(1, (t - tFirst) / tSpan));
+  } else {
+    const lapFrom = parseInt(document.getElementById('mapLapFrom')?.value || '1');
+    const lapTo   = mapLapSingleMode ? lapFrom : parseInt(document.getElementById('mapLapTo')?.value || lapFrom);
+    const r1 = lapToTimeRange(lapFrom), r2 = lapToTimeRange(lapTo);
+    if (!r1) return;
+    const tS = r1.tStart, tE = (r2 || r1).tEnd;
+    mapRangeStart = Math.max(0, Math.min(1, (tS - tFirst) / tSpan));
+    mapRangeEnd   = Math.max(0, Math.min(1, (tE - tFirst) / tSpan));
+  }
+  stopReplay();
+  drawMapTrace();
+}
+
+
 let calcMode = 'time';      // 'time' | 'lap'
 let lapSingleMode = false;  // when true, lapTo is hidden and equals lapFrom
 
