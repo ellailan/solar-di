@@ -998,6 +998,8 @@ const history = {};
 const gpsHistory = [];
 const latest  = {};
 SIGNALS.forEach(m => { history[m.field] = []; latest[m.field] = { value:null, prev:null }; });
+// LapIndexSpreadsheet is used for lap resolution but isn't in SIGNALS
+history['LapIndexSpreadsheet'] = [];
 
 // ─── SIDEBAR BUILDER ─────────────────────────────────────────────────────────
 let activeFields = new Set();
@@ -1609,6 +1611,11 @@ function pushGPS(t, lat, lon) {
 function ingest(data) {
   const now = Date.now();
   SIGNALS.forEach(m => { if (data[m.field] !== undefined) push(m.field, now, data[m.field]); });
+  if (data.LapIndexSpreadsheet !== undefined) {
+    history['LapIndexSpreadsheet'].push({ t: now, v: data.LapIndexSpreadsheet });
+    const cut = now - MAX_MS;
+    while (history['LapIndexSpreadsheet'].length && history['LapIndexSpreadsheet'][0].t < cut) history['LapIndexSpreadsheet'].shift();
+  }
   if (data.lat !== undefined && data.lon !== undefined) pushGPS(data.timestamp || now, data.lat, data.lon);
 }
 
@@ -1820,6 +1827,9 @@ function dummyTick() {
   const now = Date.now();
   pushGPS(now, pt[0], pt[1]);
   SIGNALS.forEach(sig => { if (ds[sig.field] !== undefined) push(sig.field, now, ds[sig.field]); });
+  history['LapIndexSpreadsheet'].push({ t: now, v: ds.LapIndexSpreadsheet });
+  const cut = Date.now() - MAX_MS;
+  while (history['LapIndexSpreadsheet'].length && history['LapIndexSpreadsheet'][0].t < cut) history['LapIndexSpreadsheet'].shift();
 }
 
 // ─── DATETIME PICKER ─────────────────────────────────────────────────────────
@@ -2819,6 +2829,7 @@ buildSidebar();
         history[sig.field].push({ t, v });
       }
     });
+    history['LapIndexSpreadsheet'].push({ t, v: seed.LapIndexSpreadsheet });
     const wp = WAYPOINTS[wpSeed % WAYPOINTS.length]; wpSeed++;
     gpsHistory.push({ t, lat: wp[0], lon: wp[1] });
   }
