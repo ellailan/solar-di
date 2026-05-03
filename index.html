@@ -1862,15 +1862,6 @@ function drawMapTrace() {
     const norm = v !== null ? (v - vMin) / vRange : 0.5;
     const bucket = Math.round(norm * (BUCKETS - 1));
     const col = metricToColor(norm);
-    // Break the line on a teleport gap instead of drawing across the country
-    const isTeleport = haversineMeters(pts[i].lat, pts[i].lon, pts[i+1].lat, pts[i+1].lon) > GPS_TELEPORT_THRESHOLD_M;
-    if (isTeleport) {
-      runLatLngs.push([pts[i].lat, pts[i].lon]);
-      flushRun(prevCol || col);
-      runLatLngs = [[pts[i+1].lat, pts[i+1].lon]];
-      runBucket = -1; prevCol = null;
-      continue;
-    }
     if (bucket !== runBucket) {
       flushRun(prevCol || col);
       runLatLngs = runLatLngs.length > 0 ? [runLatLngs[runLatLngs.length-1], [pts[i].lat, pts[i].lon]] : [[pts[i].lat, pts[i].lon]];
@@ -1987,20 +1978,7 @@ function push(field, t, raw) {
   if (field === 'PackPower')        { const el = document.getElementById('vital-power');   if(el) el.firstChild.textContent = v.toFixed(0); }
 }
 
-const GPS_TELEPORT_THRESHOLD_M = 100;
-
-function haversineMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const toRad = x => x * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 function pushGPS(t, lat, lon) {
-  // Drop points that teleport (simulator glitch on map mode toggle)
-  const prev = gpsHistory[gpsHistory.length - 1];
-  if (prev && haversineMeters(prev.lat, prev.lon, lat, lon) > GPS_TELEPORT_THRESHOLD_M) return;
   gpsHistory.push({ t, lat, lon });
   const cut = Date.now() - MAX_MS;
   while (gpsHistory.length && gpsHistory[0].t < cut) gpsHistory.shift();
