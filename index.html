@@ -1978,7 +1978,23 @@ function push(field, t, raw) {
   if (field === 'PackPower')        { const el = document.getElementById('vital-power');   if(el) el.firstChild.textContent = v.toFixed(0); }
 }
 
+const GPS_TELEPORT_THRESHOLD_M = 1000;
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function pushGPS(t, lat, lon) {
+  const prev = gpsHistory[gpsHistory.length - 1];
+  if (prev && haversineMeters(prev.lat, prev.lon, lat, lon) > GPS_TELEPORT_THRESHOLD_M) {
+    // Car teleported — wipe history and start fresh from new position
+    gpsHistory.length = 0;
+    mapFitted = false;
+  }
   gpsHistory.push({ t, lat, lon });
   const cut = Date.now() - MAX_MS;
   while (gpsHistory.length && gpsHistory[0].t < cut) gpsHistory.shift();
