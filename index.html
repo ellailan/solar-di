@@ -704,6 +704,40 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:2px
 .leaflet-control-attribution a { color:var(--muted) !important; }
 .leaflet-bar a { background:var(--navy2) !important; color:var(--text) !important; border-color:var(--border2) !important; }
 .leaflet-bar a:hover { background:var(--navy3) !important; }
+
+/* ── SOURCE TOGGLE ── */
+.source-toggle {
+  display:flex; align-items:center; gap:0;
+  margin-left:auto; margin-right:14px; flex-shrink:0;
+  background:var(--navy3); border:1px solid var(--border2); border-radius:1px;
+  overflow:hidden; position:relative;
+}
+.source-btn {
+  display:flex; align-items:center; gap:6px;
+  background:transparent; border:none; color:var(--muted);
+  font-family:var(--mono); font-size:10px; font-weight:500;
+  padding:0 13px; height:24px; cursor:pointer; letter-spacing:.08em;
+  text-transform:uppercase; transition:background .12s, color .12s;
+  white-space:nowrap; position:relative; z-index:1;
+}
+.source-btn + .source-btn { border-left:1px solid var(--border2); }
+.source-btn:hover:not(.active) { color:var(--text-dim); background:rgba(255,255,255,.03); }
+.source-btn.active.sim-active { background:var(--navy4); color:var(--text-dim); border-color:var(--border3); }
+.source-btn.active.car-active { background:rgba(61,158,107,.12); color:#3d9e6b; border-color:rgba(61,158,107,.35); }
+.source-dot {
+  width:5px; height:5px; border-radius:50%; flex-shrink:0;
+  background:var(--muted); transition:background .2s, box-shadow .2s;
+}
+.sim-active .source-dot { background:var(--text-dim); }
+.car-active .source-dot { background:#3d9e6b; box-shadow:0 0 5px #3d9e6b99; }
+.source-badge {
+  font-family:var(--mono); font-size:8px; font-weight:600; letter-spacing:.06em;
+  padding:2px 6px; border-radius:1px; margin-left:2px; flex-shrink:0;
+  text-transform:uppercase; transition:all .2s;
+}
+.source-badge.sim  { background:var(--navy5); color:var(--muted); border:1px solid var(--border); }
+.source-badge.car  { background:rgba(61,158,107,.15); color:#3d9e6b; border:1px solid rgba(61,158,107,.35); }
+.source-badge.live { background:rgba(201,168,75,.12); color:var(--gold); border:1px solid var(--gold-dim); }
 </style>
 </head>
 <body>
@@ -718,6 +752,17 @@ input[type=range] { flex:1; min-width:80px; accent-color:var(--gold); height:2px
       <button class="top-tab" id="tabCalc" onclick="switchTab('calc')">Calculations</button>
       <button class="top-tab" id="tabLapAnalysis" onclick="switchTab('lapanalysis')">Lap Analysis</button>
     </nav>
+    <!-- ── DATA SOURCE TOGGLE ── -->
+    <div class="source-toggle" id="sourceToggle">
+      <button class="source-btn active sim-active" id="srcSimBtn" onclick="setSource('sim')">
+        <span class="source-dot"></span>Simulator
+        <span class="source-badge sim" id="srcSimBadge">SIM</span>
+      </button>
+      <button class="source-btn" id="srcCarBtn" onclick="setSource('car')">
+        <span class="source-dot"></span>Car
+        <span class="source-badge car" id="srcCarBadge">STANDBY</span>
+      </button>
+    </div>
     <div class="header-search">
       <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -3124,7 +3169,7 @@ function renderLapAnalysis() {
 buildSidebar();
 
 // ── Seed 3 laps of historical data ──────────────────────────────────────────
-(function seedHistory() {
+function seedHistory() {
   const LAP_DURATION_MS = 4 * 60 * 1000; // 4 min per lap (simulated)
   const TICK_INTERVAL_MS = 2000;          // one point every 2s
   const now = Date.now();
@@ -3195,10 +3240,92 @@ buildSidebar();
     const wp = WAYPOINTS[wpSeed % WAYPOINTS.length]; wpSeed++;
     gpsHistory.push({ t, lat: wp[0], lon: wp[1] });
   }
-})();
+}
 
-setInterval(dummyTick, 500);
-// Boot into Overview
+// ─── DATA SOURCE SWITCHING ────────────────────────────────────────────────────
+let dataSource = 'sim';
+let dummyTickInterval = null;
+let telemetryChannel = null;
+
+function flushHistory() {
+  SIGNALS.forEach(m => {
+    history[m.field] = [];
+    latest[m.field] = { value: null, prev: null };
+    const el = document.getElementById('sigval-' + m.field);
+    if (el) el.textContent = '—';
+  });
+  history['LapIndexSpreadsheet'] = [];
+  gpsHistory.length = 0;
+  ['vital-voltage','vital-soc','vital-speed','vital-power'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.firstChild) el.firstChild.textContent = '—';
+  });
+  if (activeTab === 'map') {
+    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+    mapPolylines = []; replayMarker = null; mapFitted = false;
+  }
+}
+
+function refreshActiveTab() {
+  switch (activeTab) {
+    case 'overview':    renderOverview(); break;
+    case 'data':        if (activeFields.size > 0) render(); break;
+    case 'map':         switchTab('map'); break;
+    case 'lapanalysis': renderLapAnalysis(); break;
+  }
+}
+
+function setSource(src) {
+  if (src === dataSource) return;
+  dataSource = src;
+
+  const simBtn   = document.getElementById('srcSimBtn');
+  const carBtn   = document.getElementById('srcCarBtn');
+  const simBadge = document.getElementById('srcSimBadge');
+  const carBadge = document.getElementById('srcCarBadge');
+
+  // Stop whatever is currently running
+  if (dummyTickInterval) { clearInterval(dummyTickInterval); dummyTickInterval = null; }
+  if (telemetryChannel)  { telemetryChannel.onmessage = null; }
+
+  // Wipe all stale data from the previous source
+  flushHistory();
+
+  if (src === 'sim') {
+    simBtn.classList.add('active', 'sim-active');
+    simBtn.classList.remove('car-active');
+    carBtn.classList.remove('active', 'car-active', 'sim-active');
+    simBadge.textContent = 'SIM';
+    simBadge.className   = 'source-badge sim';
+    carBadge.textContent = 'STANDBY';
+    carBadge.className   = 'source-badge car';
+    seedHistory();
+    dummyTickInterval = setInterval(dummyTick, 500);
+  } else {
+    carBtn.classList.add('active', 'car-active');
+    carBtn.classList.remove('sim-active');
+    simBtn.classList.remove('active', 'sim-active', 'car-active');
+    carBadge.textContent = 'CONNECTING…';
+    carBadge.className   = 'source-badge car';
+    simBadge.textContent = 'OFF';
+    simBadge.className   = 'source-badge sim';
+    if (!telemetryChannel) telemetryChannel = new BroadcastChannel('telemetry');
+    telemetryChannel.onmessage = (e) => {
+      ingest(e.data);
+      const badge = document.getElementById('srcCarBadge');
+      if (badge && badge.textContent !== 'LIVE') {
+        badge.textContent = 'LIVE';
+        badge.className   = 'source-badge live';
+      }
+    };
+  }
+
+  refreshActiveTab();
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+seedHistory();
+dummyTickInterval = setInterval(dummyTick, 500);
 switchTab('overview');
 window.addEventListener('resize', () => {
   if (leafletMap) leafletMap.invalidateSize();
