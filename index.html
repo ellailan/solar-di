@@ -1831,7 +1831,8 @@ function drawMapTrace() {
   mapPolylines.forEach(p => p.remove()); mapPolylines = [];
   if (replayMarker) { replayMarker.remove(); replayMarker = null; }
   const n = gpsHistory.length;
-  if (n < 2) { leafletMap.setView([49.2827, -123.1207], 13); return; }
+  if (n < 1) return;
+  if (n < 2) { leafletMap.setView([gpsHistory[0].lat, gpsHistory[0].lon], 15); return; }
 
   const iStart = Math.floor(mapRangeStart * (n - 1));
   const iEnd   = Math.ceil(mapRangeEnd * (n - 1));
@@ -1860,7 +1861,13 @@ function drawMapTrace() {
     }).addTo(leafletMap);
     mapPolylines.push(dot);
   }
-  if (!mapFitted) { leafletMap.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lon])), { padding:[24,24] }); mapFitted = true; }
+  if (!mapFitted) {
+    leafletMap.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lon])), { padding:[24,24] });
+    mapFitted = true;
+  } else {
+    const last = pts[pts.length - 1];
+    leafletMap.panTo([last.lat, last.lon], { animate: true, duration: 0.5 });
+  }
   updateScrubInfo(iStart, iEnd, n);
 }
 
@@ -1993,6 +2000,7 @@ function pushGPS(t, lat, lon) {
     const n = gpsHistory.length, i = n-2;
     const iS = Math.floor(mapRangeStart*(n-1)), iE = Math.ceil(mapRangeEnd*(n-1));
     if (i >= iS && i < iE && n % 5 === 0) drawMapTrace();
+    else if (gpsHistory.length > 0) leafletMap.panTo([gpsHistory[n-1].lat, gpsHistory[n-1].lon]);
   }
 }
 
