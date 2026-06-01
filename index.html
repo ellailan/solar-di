@@ -1864,9 +1864,6 @@ function drawMapTrace() {
   if (!mapFitted) {
     leafletMap.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lon])), { padding:[24,24] });
     mapFitted = true;
-  } else {
-    const last = pts[pts.length - 1];
-    leafletMap.panTo([last.lat, last.lon], { animate: true, duration: 0.5 });
   }
   updateScrubInfo(iStart, iEnd, n);
 }
@@ -2000,7 +1997,6 @@ function pushGPS(t, lat, lon) {
     const n = gpsHistory.length, i = n-2;
     const iS = Math.floor(mapRangeStart*(n-1)), iE = Math.ceil(mapRangeEnd*(n-1));
     if (i >= iS && i < iE && n % 5 === 0) drawMapTrace();
-    else if (gpsHistory.length > 0) leafletMap.panTo([gpsHistory[n-1].lat, gpsHistory[n-1].lon]);
   }
 }
 
